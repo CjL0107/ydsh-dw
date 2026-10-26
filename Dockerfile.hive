@@ -1,0 +1,27 @@
+# 云购生活 Hive 运行镜像
+# ---------------------------------------------------------------
+# 为什么需要这个 Dockerfile：
+#   apache/hive 官方镜像**不自带** MySQL JDBC 驱动，直接用
+#   DB_DRIVER=mysql 启动 Metastore 会报
+#   "No suitable driver found for jdbc:mysql://..."
+#   这里用一个多阶段构建把 mysql-connector-j 打进镜像，
+#   这样 docker compose up 一次就能起来，不用手动下载 jar。
+#
+# 只需要构建一次，之后 docker compose up 会复用本地镜像。
+# ---------------------------------------------------------------
+
+# ---- 阶段 1：下载 JDBC 驱动（独立镜像，不污染 Hive 镜像）
+FROM alpine:3.20 AS jdbc
+
+ARG MYSQL_CONNECTOR_VERSION=8.4.0
+RUN apk add --no-cache curl \
+ && curl -fsSL -o /tmp/mysql-connector-j.jar \
+    "https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/${MYSQL_CONNECTOR_VERSION}/mysql-connector-j-${MYSQL_CONNECTOR_VERSION}.jar" \
+ && ls -lh /tmp/mysql-connector-j.jar
+
+# ---- 阶段 2：塞进 Hive 镜像
+FROM apache/hive:4.0.0
+
+COPY --from=jdbc --chown=hive:hive /tmp/mysql-connector-j.jar /opt/hive/lib/mysql-connector-j.jar
+
+# 不修改 ENTRYPOINT / USER，保持官方镜像行为

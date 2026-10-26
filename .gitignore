@@ -1,0 +1,63 @@
+# ============================================================
+# 云购生活数仓项目 .gitignore
+# 原则：数据不进库、密钥不进库、环境垃圾不进库
+# ============================================================
+
+# ---------- 数据文件（体积大，且属于企业资产，不入版本库）----------
+data/*.csv
+data/**/*.csv
+*.csv
+*.tsv
+*.parquet
+*.orc
+
+# ---------- 密钥与敏感配置 ----------
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+secrets/
+
+# ---------- 日志与临时文件 ----------
+*.log
+logs/
+*.tmp
+.tmp/
+tmp/
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+.pytest_cache/
+
+# ---------- Java / Maven ----------
+target/
+*.class
+*.jar
+!lib/*.jar
+
+# ---------- Node（第4周前端用）----------
+node_modules/
+dist/
+
+# ---------- IDE 与系统 ----------
+.idea/
+.vscode/
+!.vscode/settings.json
+*.iml
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------- Office 临时锁文件 ----------
+~$*.docx
+~$*.xlsx
+~$*.pptx

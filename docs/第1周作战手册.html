@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 1 周作战手册 · 云购生活数仓项目</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --card:#ffffff; --ink:#1a1f2b; --ink-2:#4a5568; --ink-3:#8b95a5;
+    --line:#e3e8ef; --brand:#2563eb; --brand-soft:#eff4ff;
+    --ok:#0f9d58; --ok-soft:#e8f6ee; --warn:#c2410c; --warn-soft:#fff4e8;
+    --code-bg:#0f172a; --code-ink:#e2e8f0;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    font-size:15px; line-height:1.75;
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:28px 22px 80px;}
+
+  /* ---------- header ---------- */
+  header.hero{
+    background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 55%,#3b82f6 100%);
+    color:#fff; border-radius:16px; padding:30px 32px; margin-bottom:26px;
+    box-shadow:0 10px 30px rgba(37,99,235,.18);
+  }
+  .hero .kicker{font-size:12.5px; letter-spacing:.14em; opacity:.82; text-transform:uppercase;}
+  .hero h1{margin:8px 0 6px; font-size:27px; line-height:1.35; letter-spacing:-.3px;}
+  .hero p{margin:0; opacity:.9; font-size:14px;}
+  .hero .meta{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;}
+  .pill{background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.26);
+        border-radius:999px; padding:4px 13px; font-size:12.5px;}
+
+  /* ---------- progress ---------- */
+  .progress-bar{
+    display:flex; align-items:center; gap:14px; background:var(--card);
+    border:1px solid var(--line); border-radius:var(--radius); padding:14px 18px; margin-bottom:24px;
+  }
+  .track{flex:1; height:9px; background:#eef1f6; border-radius:999px; overflow:hidden;}
+  .fill{height:100%; width:0%; background:linear-gradient(90deg,#22c55e,#16a34a);
+        border-radius:999px; transition:width .35s ease;}
+  .progress-bar .num{font-variant-numeric:tabular-nums; font-weight:600; color:var(--ok); font-size:14px;}
+
+  /* ---------- task card ---------- */
+  .task{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    margin-bottom:18px; overflow:hidden;
+    box-shadow:0 1px 2px rgba(16,24,40,.04);
+  }
+  .task.done{border-color:#b7e4c9; background:#fcfefd;}
+  .task-head{
+    display:flex; align-items:flex-start; gap:14px; padding:18px 20px; cursor:pointer;
+    border-bottom:1px solid transparent;
+  }
+  .task.open .task-head{border-bottom-color:var(--line);}
+  .chk{
+    flex:0 0 auto; width:22px; height:22px; margin-top:3px; border:1.5px solid #c7d0dd;
+    border-radius:6px; background:#fff; cursor:pointer; display:grid; place-items:center;
+    transition:.15s; position:relative;
+  }
+  .chk:hover{border-color:var(--ok);}
+  .chk.checked{background:var(--ok); border-color:var(--ok);}
+  .chk.checked::after{
+    content:""; width:5px; height:10px; border:solid #fff; border-width:0 2px 2px 0;
+    transform:rotate(45deg) translate(-1px,-1px);
+  }
+  .task-title{flex:1; min-width:0;}
+  .task-title .row1{display:flex; align-items:center; gap:9px; flex-wrap:wrap;}
+  .no{
+    font-size:11.5px; font-weight:700; color:var(--brand); background:var(--brand-soft);
+    border-radius:5px; padding:1.5px 7px; letter-spacing:.04em;
+  }
+  .task-title h2{margin:0; font-size:16.5px; font-weight:650; letter-spacing:-.2px;}
+  .task-title .sub{margin:4px 0 0; font-size:13px; color:var(--ink-3);}
+  .cost{font-size:12px; color:var(--ink-3); white-space:nowrap; padding-top:2px;}
+  .task-body{padding:4px 20px 20px; display:none;}
+  .task.open .task-body{display:block;}
+
+  h3.sec{
+    font-size:13px; font-weight:700; color:var(--ink-3); letter-spacing:.06em;
+    margin:20px 0 8px; text-transform:uppercase;
+  }
+  h3.sec:first-child{margin-top:14px;}
+
+  ul.goal{margin:0; padding-left:20px;}
+  ul.goal li{margin:3px 0; color:var(--ink-2);}
+  ul.goal li b{color:var(--ink);}
+
+  /* ---------- code ---------- */
+  .code{position:relative; margin:10px 0 0;}
+  .code pre{
+    margin:0; background:var(--code-bg); color:var(--code-ink); border-radius:10px;
+    padding:15px 16px; overflow-x:auto; font-size:13px; line-height:1.65;
+    font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  .code pre .cm{color:#7c8aa5;}
+  .copy{
+    position:absolute; top:8px; right:8px; background:rgba(255,255,255,.1);
+    color:#cbd5e1; border:1px solid rgba(255,255,255,.16); border-radius:6px;
+    font-size:11.5px; padding:3px 10px; cursor:pointer; transition:.15s;
+    font-family:inherit;
+  }
+  .copy:hover{background:rgba(255,255,255,.2); color:#fff;}
+  .copy.ok{background:#16a34a; border-color:#16a34a; color:#fff;}
+
+  /* ---------- note boxes ---------- */
+  .box{border-radius:10px; padding:12px 15px; margin-top:12px; font-size:13.5px;}
+  .box .tag{font-weight:700; font-size:12px; letter-spacing:.05em; display:block; margin-bottom:3px;}
+  .box.pass{background:var(--ok-soft); border:1px solid #c9ebd8;}
+  .box.pass .tag{color:var(--ok);}
+  .box.warn{background:var(--warn-soft); border:1px solid #fbdcc0;}
+  .box.warn .tag{color:var(--warn);}
+  .box.info{background:var(--brand-soft); border:1px solid #d6e4ff;}
+  .box.info .tag{color:var(--brand);}
+  .box p{margin:0;}
+  .box p + p{margin-top:6px;}
+  .box code, td code, li code{
+    background:#eef1f6; color:#0f172a; padding:1px 5px; border-radius:4px;
+    font-size:12.5px; font-family:"SFMono-Regular",Consolas,monospace;
+  }
+
+  /* ---------- table ---------- */
+  table{width:100%; border-collapse:collapse; margin-top:10px; font-size:13.5px;}
+  th,td{text-align:left; padding:9px 11px; border-bottom:1px solid var(--line); vertical-align:top;}
+  th{background:#f8fafc; font-weight:650; font-size:12.5px; color:var(--ink-2); letter-spacing:.02em;}
+  tr:last-child td{border-bottom:none;}
+  td.num,th.num{text-align:right; font-variant-numeric:tabular-nums;}
+
+  footer{margin-top:34px; text-align:center; font-size:12.5px; color:var(--ink-3);}
+  @media(max-width:640px){
+    .wrap{padding:16px 13px 60px;}
+    header.hero{padding:22px 20px;}
+    .hero h1{font-size:21px;}
+    .task-head{padding:14px 14px; gap:10px;}
+    .task-body{padding:0 14px 16px;}
+    .cost{display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="kicker">Week 01 · Operating Manual</div>
+    <h1>第 1 周作战手册<br>项目启动 · 环境搭建 · 数据导入与清洗（一）</h1>
+    <p>云购生活 · 企业级数据仓库与经营分析可视化系统</p>
+    <div class="meta">
+      <span class="pill">7 个子任务</span>
+      <span class="pill">10 课时实操</span>
+      <span class="pill">6 项交付物</span>
+      <span class="pill">评分 100 分</span>
+    </div>
+  </header>
+
+  <div class="progress-bar">
+    <span style="font-size:13px;color:var(--ink-2);">完成进度</span>
+    <div class="track"><div class="fill" id="fill"></div></div>
+    <span class="num" id="pct">0 / 7</span>
+  </div>
+
+  <!-- ============ 0 准备 ============ -->
+  <section class="task open" data-id="t0">
+    <div class="task-head">
+      <div class="chk" data-idx="t0"></div>
+      <div class="task-title">
+        <div class="row1"><span class="no">准备</span><h2>开工前 5 分钟：把环境与数据就位</h2></div>
+        <p class="sub">项目已在 <code>桌面/ydsh-dw</code> 建好，SQL 脚本、Compose 编排、文档全部就绪</p>
+      </div>
+      <span class="cost">前置</span>
+    </div>
+    <div class="task-body">
+      <h3 class="sec">你要做的事</h3>
+      <ul class="goal">
+        <li>确认 <b>Docker Desktop 已安装并启动</b>（托盘图标为运行中）；没装先去官网装，勾选 WSL 2 backend</li>
+        <li>确认 <b>6 个 CSV 已在 <code>data/</code> 目录</b>（已替你放好，共约 6.7 MB）</li>
+        <li>在项目根目录打开 PowerShell</li>
+      </ul>
+      <div class="code">
+        <button class="copy">复制</button>
+<pre>cd "C:\Users\Lenovo\Desktop\ydsh-dw"
+docker version
+docker compose version
+dir data</pre>
+      </div>
+      <div class="box pass">
+        <span class="tag">验收</span>
+        <p>两条命令都能输出版本号；<code>dir data</code> 列出 6 个 csv 文件。任何一条报 <code>command not found</code>，先解决 Docker 安装问题，不要往下走。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 1 ============ -->
+  <section class="task" data-id="t1">
+    <div class="task-head">
+      <div class="chk" data-idx="t1"></div>
+      <div class="task-title">
+        <div class="row1"><span class="no">子任务 1</span><h2>团队组建与项目规划</h2></div>
+        <p class="sub">3～4 人团队、4 个角色、README 里写清目标与阶段计划</p>
+      </div>
+      <span class="cost">1 课时</span>
+    </div>
+    <div class="task-body">
+      <h3 class="sec">角色分工（按任务书原文）</h3>
+      <table>
+        <tr><th>角色</th><th>本周主责</th><th>后续周次</th></tr>
+        <tr><td>项目经理</td><td>进度管控、README、答辩汇报</td><td>全程统筹</td></tr>
+        <tr><td>数据工程师</td><td>Docker/Hive 环境、ODS 建表导入</td><td>第 2 周四层建模</td></tr>
+        <tr><td>数据分析师</td><td>五维度质量评估、清洗脚本</td><td>第 3 周 KPI 与预测</td></tr>
+        <tr><td>可视化工程师</td><td>Git 仓库规范、可视化准备</td><td>第 4 周 Superset/大屏</td></tr>
+      </table>
+      <h3 class="sec">操作</h3>
+      <ul class="goal">
+        <li>打开 <code>README.md</code>，把顶部 <b>团队名称 / 口号 / 分工表</b> 里的 <code>&lt;姓名&gt;</code> 占位符替换成真实信息</li>
+        <li>确认 README 里的「六层架构图」「进度看板」符合你们组的理解（可直接改）</li>
+        <li>通读 <code>00_项目总说明与模拟数据字典.docx</code>，尤其是 4.2 数据字典，后面建表全靠它</li>
+      </ul>
+      <div class="box pass">
+        <span class="tag">验收</span>
+        <p>README.md 无残留占位符；团队每人能在 30 秒内说清自己这周负责什么。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 2 ============ -->
+  <section class="task" data-id="t2">
+    <div class="task-head">
+      <div class="chk" data-idx="t2"></div>
+      <div class="task-title">
+        <div class="row1"><span class="no">子任务 2</span><h2>开发环境搭建：Docker + Hive + MySQL</h2></div>
+        <p class="sub">三个容器一键起，这是本周最容易卡住的一步</p>
+      </div>
+      <span class="cost">2 课时</span>
+    </div>
+    <div class="task-body">
+      <h3 class="sec">启动</h3>
+      <div class="code">
+        <button class="copy">复制</button>
+<pre>cd "C:\Users\Lenovo\Desktop\ydsh-dw"
+
+<span class="cm"># 首次必须带 --build：要先把 MySQL 驱动打进 Hive 镜像</span>
+docker compose up -d --build
+
+<span class="cm"># 等 60~90 秒，确认三个容器都是 Up（不是 Restarting / Exited）</span>
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"</pre>
+      </div>
+      <h3 class="sec">验证</h3>
+      <div class="code">
+        <button class="copy">复制</button>
+<pre><span class="cm"># 1) 元数据库正常</span>
+docker exec -it mysql mysql -uroot -proot -e "use metastore; show tables;"
+
+<span class="cm"># 2) Hive 可连接</span>
+docker exec -it hive-server beeline -u "jdbc:hive2://localhost:10000/"
+<span class="cm"># 进入后执行：show databases;  然后 exit;</span></pre>
+      </div>
+      <div class="box warn">
+        <span class="tag">必踩的坑：Metastore 反复重启</span>
+        <p>官方 <code>apache/hive</code> 镜像<b>不自带任何数据库驱动</b>。如果你照网上教程直接 <code>docker run</code> 配 <code>DB_DRIVER=mysql</code>，一定报 <code>No suitable driver found</code>。</p>
+        <p>本项目的 <code>Dockerfile.hive</code> 已经用多阶段构建把 <code>mysql-connector-j</code> 打进去了，所以只要带 <code>--build</code> 就不会踩这个坑。看日志确认：<code>docker logs hive-metastore</code></p>
+      </div>
+      <div class="box warn">
+        <span class="tag">坑 2：容器 Up 但 beeline 连不上</span>
+        <p>HiveServer2 冷启动要 40～90 秒，<code>Up</code> 只代表进程活着不等于 10000 端口在听。等一会儿再连，或 <code>docker logs -f hive-server</code> 看到 <code>Service listening on port 10000</code> 再试。</p>
+      </div>
+      <div class="box pass">
+        <span class="tag">验收</span>
+        <p>三个容器均 Up；beeline 能进交互界面，<code>show databases;</code> 返回 <code>default</code>。这一步过了，本周最难的部分就过去了。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3 ============ -->
+  <section class="task" data-id="t3">
+    <div class="task-head">
+      <div class="chk" data-idx="t3"></div>
+      <div class="task-title">
+        <div class="row1"><span class="no">子任务 3</span><h2>Git 基础与版本管理规范</h2></div>
+        <p class="sub">init → add → commit → push，加 .gitignore 和提交规范</p>
+      </div>
+      <span class="cost">2 课时</span>
+    </div>
+    <div class="task-body">
+      <h3 class="sec">初始化并首次推送</h3>
+      <div class="code">
+        <button class="copy">复制</button>
+<pre><span class="cm"># 1) 身份配置（只需一次）</span>
+git config --global user.name "你的姓名"
+git config --global user.email "你的邮箱"
+
+<span class="cm"># 2) 生成 SSH 密钥并加到 GitHub / GitLab</span>
+ssh-keygen -t ed25519 -C "你的邮箱"
+cat ~/.ssh/id_ed25519.pub
+
+<span class="cm"># 3) 初始化仓库</span>
+cd "C:\Users\Lenovo\Desktop\ydsh-dw"
+git init
+git add .
+git commit -m "feat: 初始化项目结构与环境编排"
+git branch -M main
+git remote add origin git@github.com:你的账号/ydsh-dw.git
+git push -u origin main</pre>
+      </div>
+      <h3 class="sec">确认 .gitignore 生效</h3>
+      <div class="code">
+        <button class="copy">复制</button>
+<pre><span class="cm"># 下面这条不应该输出任何 csv / .env / .log</span>
+git status --short
+git check-ignore -v data/ods_order.csv</pre>
+      </div>
+      <div class="box info">
+        <span class="tag">提交规范（评分点）</span>
+        <p>采用 Conventional Commits：<code>feat:</code> 新功能 · <code>fix:</code> 修复 · <code>docs:</code> 文档 · <code>refactor:</code> 重构 · <code>chore:</code> 配置</p>
+        <p>建议按子任务拆提交，例如：<code>feat: 新增 ODS 六张表建表脚本</code> → <code>feat: 完成 ODS 数据导入与行数校验</code> → <code>feat: 新增五维度质量评估 SQL</code></p>
+      </div>
+      <div class="box pass">
+        <span class="tag">验收</span>
+        <p>远程仓库能看到提交记录；队友能 <code>git clone</code>；<code>git status</code> 不显示 CSV 与 .env。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4 ============ -->
+  <section class="task" data-id="t4">
+    <div class="task-head">
+      <div class="chk" data-idx="t4"></div>
+      <div class="task-title">
+        <div class="row1"><span class="no">子任务 4</span><h2>数据导入 ODS 层：6 张表建表 + LOAD</h2></div>
+        <p class="sub">建表跳过表头，导入后逐表核对行数</p>
+      </div>
+      <span class="cost">2 课时</span>
+    </div>
+    <div class="task-body">
+      <h3 class="sec">建表 + 导入</h3>
+      <div class="code">
+        <button class="copy">复制</button>
+<pre><span class="cm"># 建库建表（已含 skip.header.line.count=1）</span>
+docker exec -i hive-server beeline -u "jdbc:hive2://localhost:10000/default" -f /sql/ods/create_ods.sql
+
+<span class="cm"># 导入 6 个 CSV 并输出行数校验</span>
+docker exec -i hive-server beeline -u "jdbc:hive2://localhost:10000/default" -f /sql/ods/load_ods.sql</pre>
+      </div>
+      <h3 class="sec">预期行数（与数据字典一致）</h3>
+      <table>
+        <tr><th>表</th><th class="num">预期行数</th><th>说明</th></tr>
+        <tr><td>ods_user</td><td class="num">1,000</td><td>用户维度</td></tr>
+        <tr><td>ods_product</td><td class="num">600</td><td>商品维度</td></tr>
+        <tr><td>ods_store</td><td class="num">60</td><td>门店维度</td></tr>
+        <tr><td>ods_order</td><td class="num">15,600</td><td>含 600 条重复，属正常</td></tr>
+        <tr><td>ods_order_item</td><td class="num">37,549</td><td>订单明细</td></tr>
+        <tr><td>ods_user_behavior</td><td class="num">60,000</td><td>行为日志</td></tr>
+      </table>
+      <div class="box warn">
+        <span class="tag">坑：File does not exist</span>
+        <p>CSV 在你电脑上，容器里看不见。<code>docker-compose.yml</code> 已把 <code>./data</code> 挂到容器 <code>/data</code>，所以 SQL 里写的是 <b>容器内路径</b> <code>/data/ods_order.csv</code>，不能写成 <code>D:\...</code>。</p>
+      </div>
+      <div class="box warn">
+        <span class="tag">坑：行数多 1</span>
+        <p>表头被当数据了。检查建表语句里有没有 <code>TBLPROPERTIES ('skip.header.line.count'='1')</code>。</p>
+      </div>
+      <div class="box pass">
+        <span class="tag">验收</span>
+        <p>校验查询 6 行结果 <code>is_ok</code> 全为 <code>OK</code>。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 5 ============ -->
+  <section class="task" data-id="t5">
+    <div class="task-head">
+      <div class="chk" data-idx="t5"></div>
+      <div class="task-title">
+        <div class="row1"><span class="no">子任务 5</span><h2>数据质量预评估：五维度扫描</h2></div>
+        <p class="sub">完整性 / 唯一性 / 有效性 / 一致性 / 准确性</p>
+      </div>
+      <span class="cost">1 课时</span>
+    </div>
+    <div class="task-body">
+      <div class="code">
+        <button class="copy">复制</button>
+<pre>docker exec -i hive-server beeline -u "jdbc:hive2://localhost:10000/default" -f /sql/quality/quality_assess.sql</pre>
+      </div>
+      <h3 class="sec">场景实测结论（可直接填进报告）</h3>
+      <table>
+        <tr><th>维度</th><th>核心发现</th></tr>
+        <tr><td>完整性</td><td>email 缺失 193 条（19.3%）最高；age 51、gender 84、member_level 14、launch_date 11</td></tr>
+        <tr><td>唯一性</td><td>ods_order 主键重复 <b>586 组 / 1186 行 / 需删 600 行</b>，其余 5 表无重复</td></tr>
+        <tr><td>有效性</td><td>gender 7 种写法、order_status 12 种、日期 3 种格式、手机号 102 条带横杠、行为时间 6088 条缺秒</td></tr>
+        <tr><td>一致性</td><td>6 组主外键<b>零孤儿</b>，省市级口径无冲突</td></tr>
+        <tr><td>准确性</td><td>pay_amount 负值 310 / 超 10 万 312；price 负值 20；quantity ≤0 共 718；unit_price 负值 798</td></tr>
+      </table>
+      <div class="box info">
+        <span class="tag">报告怎么写</span>
+        <p>完整版的五维度表格、问题清单与处理计划已经写在 <code>docs/数据质量预评估表.md</code>，直接拿去用，把发现的问题按你们组的理解补两句就行。</p>
+      </div>
+      <div class="box pass">
+        <span class="tag">验收</span>
+        <p>能回答：订单重复分几类？各多少组？（答：388 组整行完全重复 + 198 组主键重复但内容不同）</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 6 ============ -->
+  <section class="task" data-id="t6">
+    <div class="task-head">
+      <div class="chk" data-idx="t6"></div>
+      <div class="task-title">
+        <div class="row1"><span class="no">子任务 6</span><h2>清洗（一）：缺失值诊断与处理</h2></div>
+        <p class="sub">年龄均值填充、邮箱留空打标、上架日期按品类回填</p>
+      </div>
+      <span class="cost">1 课时</span>
+    </div>
+    <div class="task-body">
+      <div class="code">
+        <button class="copy">复制</button>
+<pre>docker exec -i hive-server beeline -u "jdbc:hive2://localhost:10000/default" -f /sql/clean/clean_user.sql
+docker exec -i hive-server beeline -u "jdbc:hive2://localhost:10000/default" -f /sql/clean/clean_product.sql</pre>
+      </div>
+      <h3 class="sec">清洗策略与业务理由（答辩必问）</h3>
+      <table>
+        <tr><th>字段</th><th>策略</th><th>为什么这么做</th></tr>
+        <tr><td>age</td><td>[1,120] 之外视为脏值，与空值一起用<b>全体有效均值 41</b> 填充；加 <code>age_is_filled</code> 标记</td><td>用户维度删行会连带删掉该用户订单关联，代价太大</td></tr>
+        <tr><td>email</td><td>保留 NULL + <code>email_is_missing</code> 标记</td><td>缺失 19.3% 无法推断，编造假邮箱比留空更危险</td></tr>
+        <tr><td>gender / member_level</td><td>空值填 <code>未知</code></td><td>同义归并（男/M/male）属第 2 周任务，本周只补缺失</td></tr>
+        <tr><td>launch_date</td><td>用<b>同品类最早日期</b>回填 + 标记位</td><td>用"当前日期"回填会把老商品误判成新品，方向反了</td></tr>
+      </table>
+      <div class="box pass">
+        <span class="tag">验收</span>
+        <p><code>dwd_user</code>：1000 行，年龄空值 0、异常 0，<code>sum(age_is_filled)=78</code>；<code>dwd_product</code>：上架日期空值 0、填充 11 条。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 7 ============ -->
+  <section class="task" data-id="t7">
+    <div class="task-head">
+      <div class="chk" data-idx="t7"></div>
+      <div class="task-title">
+        <div class="row1"><span class="no">子任务 7</span><h2>清洗（一）：重复值检测与去重</h2></div>
+        <p class="sub">ROW_NUMBER + 业务排序规则，15600 → 15000</p>
+      </div>
+      <span class="cost">1 课时</span>
+    </div>
+    <div class="task-body">
+      <div class="code">
+        <button class="copy">复制</button>
+<pre>docker exec -i hive-server beeline -u "jdbc:hive2://localhost:10000/default" -f /sql/clean/clean_order.sql
+
+<span class="cm"># 单独核对</span>
+docker exec -i hive-server beeline -u "jdbc:hive2://localhost:10000/default" -e "
+SELECT COUNT(*) AS rows_after,
+       COUNT(*) - COUNT(DISTINCT order_id) AS still_dup
+FROM ydsh_dwd.dwd_order;"</pre>
+      </div>
+      <h3 class="sec">去重逻辑（评分核心）</h3>
+      <div class="code">
+        <button class="copy">复制</button>
+<pre>ROW_NUMBER() OVER (
+  PARTITION BY order_id
+  ORDER BY order_time  DESC,   <span class="cm">-- 1. 保留最后一次写入</span>
+           pay_amount DESC,   <span class="cm">-- 2. 时间相同取成交额大的</span>
+           order_date DESC,   <span class="cm">-- 3. 再按下单日期</span>
+           rn_key      DESC   <span class="cm">-- 4. 整行指纹兜底，保证可复现</span>
+) = 1</pre>
+      </div>
+      <div class="box warn">
+        <span class="tag">为什么必须写全排序</span>
+        <p>只写 <code>PARTITION BY order_id</code> 不指定 ORDER BY，Hive 无序，每次跑结果可能不同——不可复现是硬伤，老师一问就露。第 4 个 <code>rn_key</code> 是整行内容指纹，用来消除所有并列情况。</p>
+      </div>
+      <div class="box pass">
+        <span class="tag">验收</span>
+        <p><code>dwd_order</code> = 15000 行，<code>still_dup = 0</code>，删除 600 行与预评估发现的数量完全吻合。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 交付物 ============ -->
+  <section class="task open" data-id="t8">
+    <div class="task-head">
+      <div class="chk" data-idx="t8"></div>
+      <div class="task-title">
+        <div class="row1"><span class="no">交付</span><h2>六项交付物核对（对应 100 分评分）</h2></div>
+        <p class="sub">答辩前逐项打勾，每项都能当场演示</p>
+      </div>
+      <span class="cost">验收</span>
+    </div>
+    <div class="task-body">
+      <table>
+        <tr><th>#</th><th>交付物</th><th>文件</th><th class="num">分值</th></tr>
+        <tr><td>1</td><td>README.md</td><td><code>README.md</code></td><td class="num">20</td></tr>
+        <tr><td>2</td><td>环境搭建笔记</td><td><code>docs/环境搭建笔记.md</code></td><td class="num">环境合计<br>20</td></tr>
+        <tr><td>3</td><td>Git 仓库（.gitignore + 提交历史）</td><td><code>.gitignore</code> + 远程仓库</td><td class="num">20</td></tr>
+        <tr><td>4</td><td>ODS 建表与导入脚本</td><td><code>sql/ods/*.sql</code></td><td class="num">20</td></tr>
+        <tr><td>5</td><td>数据质量预评估表</td><td><code>docs/数据质量预评估表.md</code></td><td class="num">20</td></tr>
+        <tr><td>6</td><td>缺失值 / 重复值清洗脚本</td><td><code>sql/clean/*.sql</code></td><td class="num">20</td></tr>
+      </table>
+      <div class="box info">
+        <span class="tag">一键跑完全流程</span>
+        <p><code>.\scripts\run_all.ps1</code> 会依次执行建表 → 导入校验 → 质量扫描 → 三个清洗脚本，并检查前置条件与 Hive 就绪状态。</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>第 1 周作战手册 · 云购生活数仓项目 · 勾选状态保存在本地浏览器</footer>
+</div>
+
+<script>
+(function(){
+  var KEY = 'ydsh-w1-done';
+  var done = {};
+  try { done = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e){ done = {}; }
+
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('.chk'));
+  var total = boxes.length;
+
+  function render(){
+    var n = 0;
+    boxes.forEach(function(b){
+      var id = b.dataset.idx;
+      if (done[id]) { b.classList.add('checked'); n++; } else { b.classList.remove('checked'); }
+      var card = b.closest('.task');
+      if (card) card.classList.toggle('done', !!done[id]);
+    });
+    var pct = total ? Math.round(n / total * 100) : 0;
+    document.getElementById('fill').style.width = pct + '%';
+    document.getElementById('pct').textContent = n + ' / ' + total;
+  }
+
+  boxes.forEach(function(b){
+    b.addEventListener('click', function(e){
+      e.stopPropagation();
+      var id = b.dataset.idx;
+      done[id] = !done[id];
+      try { localStorage.setItem(KEY, JSON.stringify(done)); } catch(e){}
+      render();
+    });
+  });
+
+  // 折叠展开
+  document.querySelectorAll('.task-head').forEach(function(h){
+    h.addEventListener('click', function(){
+      h.parentElement.classList.toggle('open');
+    });
+  });
+
+  // 复制按钮
+  document.querySelectorAll('.copy').forEach(function(btn){
+    btn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var pre = btn.parentElement.querySelector('pre');
+      var text = pre.innerText;
+      var ok = function(){
+        btn.textContent = '已复制';
+        btn.classList.add('ok');
+        setTimeout(function(){ btn.textContent = '复制'; btn.classList.remove('ok'); }, 1500);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(ok).catch(function(){ fallback(text, ok); });
+      } else { fallback(text, ok); }
+      function fallback(t, cb){
+        var ta = document.createElement('textarea');
+        ta.value = t; ta.style.position='fixed'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); cb(); } catch(err){}
+        document.body.removeChild(ta);
+      }
+    });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

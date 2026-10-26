@@ -1,0 +1,26 @@
+# =============================================================================
+# 兜底方案：单容器 Hive 4（内置 Derby 元数据库）
+#
+# 什么时候用：主方案 docker-compose.yml 起不来（拉不到 JDBC 驱动、MySQL 端口被占等），
+#            又必须先把 ODS 导入和清洗做完交作业的时候。
+#
+# 代价：元数据存在容器内 Derby 里，`docker compose down` 之后表结构会丢，
+#      重新 `up` 要重建表。所以务必保证 sql/ 脚本完整——这恰恰是本项目的做法。
+#
+# 启动：docker compose -f docker-compose.derby.yml up -d
+# 连接：docker exec -it hive-server beeline -u 'jdbc:hive2://localhost:10000/'
+# =============================================================================
+
+services:
+  hive-server:
+    image: apache/hive:4.0.0
+    container_name: hive-server
+    restart: unless-stopped
+    environment:
+      SERVICE_NAME: hiveserver2
+    ports:
+      - "10000:10000"
+      - "10002:10002"
+    volumes:
+      - ./data:/data:ro
+      - ./sql:/sql:ro

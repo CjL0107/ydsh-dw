@@ -1,0 +1,105 @@
+# 云购生活 · 企业级数仓 —— 一键启动 Hive + MySQL
+#
+# 启动：docker compose up -d --build
+# 停止：docker compose down            （保留数据）
+# 清空：docker compose down -v         （连元数据一起删，慎用）
+#
+# 三个容器（与《第1周部署操作手册》要求一致）：
+#   mysql          -> 3306   Metastore 元数据库
+#   hive-metastore -> 9083   Hive 元数据服务
+#   hive-server    -> 10000  HiveServer2（beeline 连接端口）
+#                   -> 10002  HiveServer2 Web UI
+
+name: ydsh-dw
+
+services:
+  # ---------------------------------------------------------------
+  # 1) MySQL：存 Hive 的元数据（库名、表名、字段、分区信息）
+  # ---------------------------------------------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: metastore
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      # 必须先等 MySQL 真正可连，否则 Metastore 初始化 schema 会失败
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  # ---------------------------------------------------------------
+  # 2) Hive Metastore：对外提供 9083 的 thrift 服务
+  # ---------------------------------------------------------------
+  hive-metastore:
+    build:
+      context: .
+      dockerfile: Dockerfile.hive
+    image: ydsh/hive:4.0.0-mysql
+    container_name: hive-metastore
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SERVICE_NAME: metastore
+      DB_DRIVER: mysql
+      # 首次启动时镜像会自动执行 schematool -initSchema 建元数据表
+      SERVICE_OPTS: >-
+        -Djavax.jdo.option.ConnectionDriverName=com.mysql.cj.jdbc.Driver
+        -Djavax.jdo.option.ConnectionURL=jdbc:mysql://mysql:3306/metastore?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+        -Djavax.jdo.option.ConnectionUserName=root
+        -Djavax.jdo.option.ConnectionPassword=root
+        -Dhive.metastore.warehouse.dir=/opt/hive/data/warehouse
+    ports:
+      - "9083:9083"
+    volumes:
+      - warehouse:/opt/hive/data/warehouse
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/9083' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+
+  # ---------------------------------------------------------------
+  # 3) HiveServer2：beeline / JDBC 连接的入口
+  # ---------------------------------------------------------------
+  hive-server:
+    image: ydsh/hive:4.0.0-mysql
+    container_name: hive-server
+    depends_on:
+      hive-metastore:
+        condition: service_started
+    environment:
+      SERVICE_NAME: hiveserver2
+      # IS_RESUME=true：元数据表已由 metastore 建好，这里跳过 schematool
+      IS_RESUME: "true"
+      SERVICE_OPTS: >-
+        -Dhive.metastore.uris=thrift://hive-metastore:9083
+        -Dhive.server2.enable.doAs=false
+        -Dhive.server2.thrift.bind.host=0.0.0.0
+    ports:
+      - "10000:10000"
+      - "10002:10002"
+    volumes:
+      - warehouse:/opt/hive/data/warehouse
+      # 把本项目的 CSV 挂进容器：LOAD DATA LOCAL INPATH 才能读到 /data/*.csv
+      # 这是最容易踩的坑 —— 文件在宿主机上，容器里是看不见的
+      - ./data:/data:ro
+      # 把 sql 目录挂进去，方便在容器内直接 beeline -f /sql/xxx.sql
+      - ./sql:/sql:ro
+
+volumes:
+  mysql_data:
+  warehouse:
