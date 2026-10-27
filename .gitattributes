@@ -7,6 +7,9 @@
 # Shell 脚本必须 LF，否则 bash 无法执行
 *.sh text eol=lf
 
+# git 钩子没有扩展名，需单独指定；否则带 CRLF 会被 git 报 "bad interpreter"
+tools/git-hooks/* text eol=lf
+
 # PowerShell 脚本保留 CRLF（Windows 习惯，且不会影响执行）
 *.ps1 text eol=crlf
 
