@@ -3,6 +3,12 @@
 # 用法：在项目根目录执行  bash scripts/run_all.sh
 set -euo pipefail
 
+# Git Bash（MSYS）会把 /sql/xxx.sql 这类以斜杠开头的参数自动改写成
+# C:/Program Files/Git/sql/xxx.sql，导致容器里报
+#   No FileSystem for scheme "C"
+# 关掉这个转换。
+export MSYS_NO_PATHCONV=1
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 

@@ -39,23 +39,23 @@ UNION ALL SELECT 'ods_user_behavior','behavior_type', SUM(IF(nvl(trim(behavior_t
 -- ================================================================
 
 -- 2.1 六张表主键重复扫描（重复组数 / 涉及行数 / 多出行数）
-SELECT 'ods_user' AS tbl, COUNT(*) AS dup_pk_groups, IFNULL(SUM(c), 0) AS dup_rows,
-       IFNULL(SUM(c), 0) - COUNT(*) AS excess_rows
+SELECT 'ods_user' AS tbl, COUNT(*) AS dup_pk_groups, NVL(SUM(c), 0) AS dup_rows,
+       NVL(SUM(c), 0) - COUNT(*) AS excess_rows
 FROM (SELECT user_id AS k, COUNT(*) AS c FROM ods_user GROUP BY user_id HAVING COUNT(*) > 1) t
 UNION ALL
-SELECT 'ods_product', COUNT(*), IFNULL(SUM(c), 0), IFNULL(SUM(c), 0) - COUNT(*)
+SELECT 'ods_product', COUNT(*), NVL(SUM(c), 0), NVL(SUM(c), 0) - COUNT(*)
 FROM (SELECT product_id AS k, COUNT(*) AS c FROM ods_product GROUP BY product_id HAVING COUNT(*) > 1) t
 UNION ALL
-SELECT 'ods_store', COUNT(*), IFNULL(SUM(c), 0), IFNULL(SUM(c), 0) - COUNT(*)
+SELECT 'ods_store', COUNT(*), NVL(SUM(c), 0), NVL(SUM(c), 0) - COUNT(*)
 FROM (SELECT store_id AS k, COUNT(*) AS c FROM ods_store GROUP BY store_id HAVING COUNT(*) > 1) t
 UNION ALL
-SELECT 'ods_order', COUNT(*), IFNULL(SUM(c), 0), IFNULL(SUM(c), 0) - COUNT(*)
+SELECT 'ods_order', COUNT(*), NVL(SUM(c), 0), NVL(SUM(c), 0) - COUNT(*)
 FROM (SELECT order_id AS k, COUNT(*) AS c FROM ods_order GROUP BY order_id HAVING COUNT(*) > 1) t
 UNION ALL
-SELECT 'ods_order_item', COUNT(*), IFNULL(SUM(c), 0), IFNULL(SUM(c), 0) - COUNT(*)
+SELECT 'ods_order_item', COUNT(*), NVL(SUM(c), 0), NVL(SUM(c), 0) - COUNT(*)
 FROM (SELECT item_id AS k, COUNT(*) AS c FROM ods_order_item GROUP BY item_id HAVING COUNT(*) > 1) t
 UNION ALL
-SELECT 'ods_user_behavior', COUNT(*), IFNULL(SUM(c), 0), IFNULL(SUM(c), 0) - COUNT(*)
+SELECT 'ods_user_behavior', COUNT(*), NVL(SUM(c), 0), NVL(SUM(c), 0) - COUNT(*)
 FROM (SELECT behavior_id AS k, COUNT(*) AS c FROM ods_user_behavior GROUP BY behavior_id HAVING COUNT(*) > 1) t;
 
 -- 2.2 订单重复的两类形态拆分（去重策略不同的根本原因）

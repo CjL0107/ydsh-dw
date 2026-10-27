@@ -5,7 +5,7 @@
 # 清空：docker compose down -v         （连元数据一起删，慎用）
 #
 # 三个容器（与《第1周部署操作手册》要求一致）：
-#   mysql          -> 3306   Metastore 元数据库
+#   mysql          -> 3307   Metastore 元数据库（宿主端口 3307，因本机已有 MySQL80 占用 3306）
 #   hive-metastore -> 9083   Hive 元数据服务
 #   hive-server    -> 10000  HiveServer2（beeline 连接端口）
 #                   -> 10002  HiveServer2 Web UI
@@ -28,7 +28,9 @@ services:
       MYSQL_DATABASE: metastore
       TZ: Asia/Shanghai
     ports:
-      - "3306:3306"
+      # 宿主 3307 -> 容器 3306。本机已装 MySQL80 服务占用 3306，
+      # 改映射即可，容器内 Hive 仍走 mysql:3306，不影响任何配置。
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
@@ -99,6 +101,10 @@ services:
       - ./data:/data:ro
       # 把 sql 目录挂进去，方便在容器内直接 beeline -f /sql/xxx.sql
       - ./sql:/sql:ro
+      # Tez 计数器上限：默认 120 会让宽表 UNION ALL 报 "Too many counters"
+      # 必须挂到 /opt/hive/conf（在 classpath 上），/opt/tez/conf 不生效
+      - ./conf/tez-site.xml:/opt/hive/conf/tez-site.xml:ro
+      - ./conf/tez-site.xml:/opt/tez/conf/tez-site.xml:ro
 
 volumes:
   mysql_data:

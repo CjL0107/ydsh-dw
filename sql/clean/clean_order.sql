@@ -83,10 +83,10 @@ SELECT '删除的重复行数',
 
 -- 3) 两类重复形态的数量（报告里要有这张表）
 SELECT
-  COUNT(*)                                                        AS 重复订单数,
-  SUM(IF(distinct_cnt = 1, 1, 0))                                 AS 整行完全重复_组,
-  SUM(IF(distinct_cnt > 1, 1, 0))                                 AS 主键重复内容不同_组,
-  SUM(cnt_in_group - 1)                                           AS 需删除行数
+  COUNT(*)                                                        AS `重复订单数`,
+  SUM(IF(distinct_cnt = 1, 1, 0))                                 AS `整行完全重复_组`,
+  SUM(IF(distinct_cnt > 1, 1, 0))                                 AS `主键重复内容不同_组`,
+  SUM(cnt_in_group - 1)                                           AS `需删除行数`
 FROM (
   SELECT order_id,
          COUNT(*) AS cnt_in_group,

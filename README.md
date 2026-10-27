@@ -49,6 +49,8 @@ ydsh-dw/
 ├── docker-compose.yml          # Hive + MySQL 编排（三个容器）
 ├── Dockerfile.hive             # 为 Hive 镜像补装 MySQL JDBC 驱动
 ├── .gitignore                  # 忽略数据文件/密钥/日志
+├── conf/
+│   └── tez-site.xml            # 调大 Tez 计数器上限（否则宽表 UNION ALL 报错）
 ├── data/                       # 模拟数据 CSV（不进版本库）
 ├── sql/
 │   ├── ods/
@@ -87,6 +89,16 @@ data/ods_order.csv ods_order_item.csv ods_user_behavior.csv
 docker compose up -d --build          # 首次需要 --build
 docker ps                             # 确认三个容器 Up
 ```
+
+| 服务 | 宿主端口 | 说明 |
+|---|---|---|
+| HiveServer2（beeline） | 10000 | 主要入口 |
+| HiveServer2 Web UI | 10002 | 浏览器打开看任务 |
+| Hive Metastore | 9083 | thrift 服务 |
+| MySQL（元数据库） | **3307** → 容器 3306 | 本机若已装 MySQL 占用了 3306，故错开 |
+
+> 宿主机访问元数据库要用 3307：`mysql -h 127.0.0.1 -P 3307 -uroot -proot`。
+> 容器之间仍用 `mysql:3306`，Hive 配置无需改动。
 
 ### 3. 建表 + 导入 + 校验
 
