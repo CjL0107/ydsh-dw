@@ -149,23 +149,61 @@ python tools/validate_cleaning.py --data-dir data
 | <姓名> | 数据分析师 | 数据质量、清洗、指标计算 | 五维度评估、清洗脚本 |
 | <姓名> | 可视化工程师 | 仪表板、大屏、前端 | Git 仓库规范、可视化准备 |
 
-## 八、Git 提交规范
+> **待填写**：把 `<姓名>` 换成真实姓名，且必须与各成员 `git config user.name` 一致。
+> 答辩时教师会对照 `git log` 的作者与仓库成员，对不上会影响「团队成员均有提交」的判定。
+> 一人多岗时，在「角色」列用 / 分隔，如「数据工程师 / 分析师」。
 
-采用 [Conventional Commits](https://www.conventionalcommits.org/)：
+## 八、Git 协作规范
 
-| 前缀 | 用途 | 示例 |
+完整规范见 **[docs/Git协作规范.md](docs/Git协作规范.md)**（含 SSH 配置、冲突处理、事故恢复）。此处只列日常高频部分。
+
+### 8.1 提交信息格式
+
+格式：`<type>(<scope>): <subject>`，**主题用中文**。采用 [Conventional Commits](https://www.conventionalcommits.org/)。
+
+| type | 用途 | 本项目示例 |
 |---|---|---|
-| `feat:` | 新增功能/脚本 | `feat: 新增 ODS 层 6 张表建表脚本` |
-| `fix:` | 修复问题 | `fix: 修正订单去重排序规则` |
-| `docs:` | 文档变更 | `docs: 补充数据质量预评估表` |
-| `refactor:` | 重构（不改功能） | `refactor: 抽取 run_sql 公共脚本` |
-| `chore:` | 杂项（配置/依赖） | `chore: 配置 .gitignore` |
-| `test:` | 测试相关 | `test: 新增行数校验用例` |
+| `feat` | 新增功能/脚本/表 | `feat(ods): 新增订单明细表建表脚本` |
+| `fix` | 修复问题 | `fix(docker): 端口映射改为 3307 避开本机 MySQL` |
+| `docs` | 只改文档 | `docs(quality): 数据质量表替换为实测值` |
+| `refactor` | 重构，行为不变 | `refactor(clean): 去重窗口函数抽成子查询` |
+| `perf` | 性能优化 | `perf(quality): 质量扫描合并为单次全表扫描` |
+| `test` | 测试相关 | `test(clean): 增加去重前后行数校验` |
+| `build` | 构建/依赖 | `build(docker): 升级 Hive 镜像到 4.0.0` |
+| `chore` | 杂项（配置/忽略规则） | `chore: 新增 .gitattributes 统一换行符` |
 
-**提交要求**
-- 一个提交只做一件事，message 用中文描述清楚"做了什么"
-- 禁止把 `data/*.csv`、`.env`、`*.log` 提交上去
-- 每天结束前 `git push`，确保答辩时远程仓库有完整历史
+**scope 取值**：`ods` `dwd` `dws` `ads` `quality` `clean` `docker` `sql` `docs` `tools` `readme` `git`
+
+格式由 `commit-msg` 钩子**强制校验**，格式不对会直接拒绝提交。每人装一次：
+
+```powershell
+.\tools\install-hooks.ps1        # PowerShell
+bash tools/install-hooks.sh      # Git Bash / WSL
+```
+
+### 8.2 分支策略
+
+| 分支 | 用途 |
+|---|---|
+| `main` | 主干，任何时刻都应能跑通 `run_all`，**不直接提交** |
+| `feature/<模块>-<简述>` | 功能开发，如 `feature/ods-load-script` |
+| `fix/<简述>` | 问题修复，如 `fix/port-3307` |
+
+合并统一用 `git merge --no-ff`，保留分支与合并节点，让 `git log --graph` 能看出协作过程。
+
+### 8.3 三条红线
+
+- `data/*.csv`、`.env`、`*.log` 一律不进库（`.gitignore` 已覆盖，误提交见规范第 8 节）
+- 一次提交只做一件事，禁止「顺便把端口也改了」
+- 每天结束前 `git push`，答辩前确认远程仓库为最新
+
+### 8.4 自检
+
+```powershell
+python tools/check_repo.py
+```
+
+输出对应「Git 规范 20 分」各观察点的检查表：提交合规率、类型分布、敏感文件、主干命名、作者分布、远程配置。答辩现场跑一次即可。
 
 ## 九、进度看板
 

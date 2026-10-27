@@ -1,0 +1,66 @@
+#!/bin/sh
+# ============================================================
+# commit-msg 钩子：校验提交信息是否符合 Conventional Commits
+# 安装：tools/install-hooks.ps1（或 .sh）
+# 绕过：git commit --no-verify -m "..."（不建议）
+# ============================================================
+
+MSG_FILE="$1"
+
+# 读取第一行作为主题
+FIRST_LINE=$(head -n 1 "$MSG_FILE")
+
+# 空信息（用户在编辑器里什么都没写就退出）交给 git 自己处理
+[ -z "$FIRST_LINE" ] && exit 0
+
+# 注释行（如 "# Please enter..."）放行
+case "$FIRST_LINE" in
+  \#*) exit 0 ;;
+esac
+
+# git merge 自动生成的 "Merge branch 'xxx'" 放行，否则 --no-ff 合并会被拦
+case "$FIRST_LINE" in
+  Merge\ *) exit 0 ;;
+esac
+
+TYPES="feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert|merge"
+PATTERN="^($TYPES)(\([A-Za-z0-9/_-]+\))?: .+"
+
+if ! printf '%s' "$FIRST_LINE" | grep -qE "$PATTERN"; then
+  printf '\n' >&2
+  printf '  提交被拒绝：信息不符合规范\n' >&2
+  printf '\n' >&2
+  printf '  你的提交信息：%s\n' "$FIRST_LINE" >&2
+  printf '\n' >&2
+  printf '  正确格式：<type>(<scope>): <subject>\n' >&2
+  printf '  可用 type：feat fix docs style refactor perf test build ci chore revert\n' >&2
+  printf '  可用 scope：ods dwd dws ads quality clean docker sql docs tools readme git\n' >&2
+  printf '\n' >&2
+  printf '  示例：feat(ods): 新增订单明细表建表脚本\n' >&2
+  printf '        fix(docker): 端口映射改为 3307 避开本机 MySQL\n' >&2
+  printf '        docs(readme): 补充团队分工与阶段计划\n' >&2
+  printf '\n' >&2
+  printf '  详见 docs/Git协作规范.md 第三节\n' >&2
+  printf '\n' >&2
+  exit 1
+fi
+
+# 去掉 type(scope): 前缀，检查主题本身
+SUBJECT=$(printf '%s' "$FIRST_LINE" | sed -E "s/^($TYPES)(\([A-Za-z0-9/_-]+\))?: //")
+
+# 主题不能以句号结尾
+case "$SUBJECT" in
+  *. | *。)
+    printf '\n  提交被拒绝：主题结尾不要加句号\n\n' >&2
+    exit 1
+    ;;
+esac
+
+# 主题过长的软提示（中文按 UTF-8 多字节计，放宽到 120 字节）
+SUBJECT_BYTES=$(printf '%s' "$SUBJECT" | wc -c | tr -d ' ')
+if [ "$SUBJECT_BYTES" -gt 120 ]; then
+  printf '\n  提示：主题偏长（约 %s 字节）。建议不超过 50 个汉字，\n' "$SUBJECT_BYTES" >&2
+  printf '        过长的说明应写进 body（空一行之后）。\n\n' >&2
+fi
+
+exit 0
