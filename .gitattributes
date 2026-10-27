@@ -1,0 +1,20 @@
+# 统一换行符，避免 Windows 与 Linux 协作时脚本"莫名报错"
+# 背景：Git 默认可能把换行改成 CRLF，导致
+#   1) bash 脚本在 WSL/Linux 下报 $'\r': command not found
+#   2) SQL 文件里出现不可见 \r，个别客户端解析异常
+* text=auto eol=lf
+
+# Shell 脚本必须 LF，否则 bash 无法执行
+*.sh text eol=lf
+
+# PowerShell 脚本保留 CRLF（Windows 习惯，且不会影响执行）
+*.ps1 text eol=crlf
+
+# 数据文件按二进制处理，禁止任何换行转换
+*.csv binary
+
+# 图片等二进制资源
+*.png binary
+*.jpg binary
+*.xlsx binary
+*.jar binary
