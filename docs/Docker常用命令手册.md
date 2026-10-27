@@ -5,6 +5,62 @@
 
 ---
 
+## 使用前必读：命令在哪敲
+
+**所有命令都在 PowerShell 里敲，不在 Docker Desktop 窗口里。** Docker Desktop 的界面只负责让引擎在后台跑（左下角绿点 `Engine running`），不需要在里面输入任何东西。
+
+打开方式：`Win + X` → 「终端」或「Windows PowerShell」。**不需要管理员权限。**
+
+**第一步永远是切到项目目录**，否则 `docker compose` 找不到配置文件：
+
+```powershell
+cd "C:\Users\Lenovo\Desktop\ydsh-dw"
+```
+
+成功时提示符会变成：
+
+```
+PS C:\Users\Lenovo\Desktop\ydsh-dw>
+```
+
+如果还是 `PS C:\Users\Lenovo>`，就是路径打错了。另一个办法：在资源管理器里打开 `ydsh-dw` 文件夹，地址栏输入 `powershell` 回车，直接在该目录开窗口。
+
+**两个不要：**
+
+- 不要复制提示符本身。`PS C:\...>` 和 `$`、`>` 都只是提示，你要敲的是后面的命令。
+- 不要加 `sudo`。那是 Linux 写法，Windows 上会直接报错。
+
+### PowerShell 与 Git Bash 的语法差别（务必分清）
+
+本手册命令以 **PowerShell** 为准。Git Bash 里部分命令要变形：
+
+| 写法 | PowerShell（默认） | Git Bash |
+|---|---|---|
+| `MSYS_NO_PATHCONV=1 docker exec ...` | **不要加**，会报错 | 必须加，否则 `/sql/x.sql` 被改写成 `C:/...` |
+| `2>&1 \| grep error` | 不可用，改 `2>$null \| Select-String error` | 可用 |
+| `export VAR=x` | 改 `$env:VAR="x"` | 可用 |
+| `docker exec -i ... -f /sql/x.sql` | 直接可用，路径不被改写 | 需上面的环境变量 |
+
+> 已实测：在 PowerShell 中 `docker exec -i hive-server beeline -u '...' -f /sql/_pathcheck.sql`
+> 能正常执行，`/sql` 路径原样传给容器。
+
+### PowerShell 5.1 的一个坑：别随便加 `2>&1`
+
+PowerShell 5.1 会把原生命令的 stderr 当成错误记录。mysql 启动时的
+`[Warning] Using a password on the command line interface can be insecure`
+属于 stderr，一旦加了 `2>&1`，就会刷出一大片 `NativeCommandError` 红字——
+**但命令其实是成功的**，别被吓到。
+
+```powershell
+# 会刷红字（命令仍然成功）
+docker exec mysql mysql -uroot -proot -e "use metastore; show tables;" 2>&1
+
+# 干净的做法
+docker exec mysql mysql -uroot -proot -e "use metastore; show tables;" 2>$null
+```
+
+---
+
 ## 零、先理解三个对象
 
 | 对象 | 是什么 | 类比 |
@@ -31,7 +87,7 @@
 
 ### 1. 看有哪些容器在跑
 
-```bash
+```powershell
 docker ps                    # 只看运行中的
 docker ps -a                 # 包括已停止的（排查"容器怎么没了"必用）
 ```
@@ -49,11 +105,11 @@ hive-metastore   ydsh/hive:4.0.0-mysql   Up 33 minutes (healthy)
 
 ### 2. 看日志（排错第一动作）
 
-```bash
+```powershell
 docker logs hive-metastore              # 全部日志
 docker logs hive-metastore --tail 50    # 只看最后 50 行
 docker logs -f hive-server              # 实时跟随（Ctrl+C 退出）
-docker logs hive-metastore 2>&1 | grep -i error
+docker logs hive-metastore 2>$null | Select-String -Pattern "error"
 ```
 
 Metastore 首次初始化成功的关键一行：
@@ -66,13 +122,13 @@ Initialized schema successfully..
 
 ### 3. 进容器执行命令
 
-```bash
+```powershell
 docker exec <容器名> <命令>
 ```
 
 例子（都是本项目实际用到的）：
 
-```bash
+```powershell
 # 查 MySQL 元数据库里建了多少张表
 docker exec mysql mysql -uroot -proot -e "use metastore; show tables;"
 
@@ -86,9 +142,10 @@ docker exec -it hive-server bash
 **⚠️ 两个必踩的坑：**
 
 - **`-it` 必须省略**。`-i` 是保持 stdin 打开，`-t` 是分配伪终端。脚本、管道、CI 里用 `-it` 会报 `cannot attach stdin to a TTY-enabled container`。只有人手动敲、且要有交互界面时才加。
-- **Git Bash 下 `-f /sql/xxx.sql` 会被改写成 `C:/...`**，报 `No FileSystem for scheme "C"`。加环境变量压掉：
+- **Git Bash 下 `-f /sql/xxx.sql` 会被改写成 `C:/...`**，报 `No FileSystem for scheme "C"`。加环境变量压掉（**PowerShell 无此问题，别加这个变量，直接写 `-f /sql/...` 就行**）：
 
 ```bash
+# 仅 Git Bash 需要这一行，PS 里不要加
 MSYS_NO_PATHCONV=1 docker exec -i hive-server beeline -u '...' -f /sql/ods/create_ods.sql
 ```
 
@@ -96,7 +153,7 @@ MSYS_NO_PATHCONV=1 docker exec -i hive-server beeline -u '...' -f /sql/ods/creat
 
 ### 4. 启停容器
 
-```bash
+```powershell
 docker stop hive-server      # 停（容器还在，docker ps -a 能看到）
 docker start hive-server     # 启
 docker restart hive-server   # 重启
@@ -106,13 +163,13 @@ docker rm hive-server        # 删（必须先 stop）
 **⚠️ 本项目踩过的坑：`docker restart hive-server` 会让容器起不来。**
 原因：`apache/hive` 镜像的 entrypoint 检测到旧 HiveServer2 进程还占着，就判定"已在运行"直接退出。正确做法是用 compose 重建：
 
-```bash
+```powershell
 docker compose up -d --force-recreate hive-server
 ```
 
 ### 5. 查容器细节和资源
 
-```bash
+```powershell
 docker inspect hive-server --format '镜像={{.Config.Image}} 挂载={{len .Mounts}}'
 docker stats --no-stream          # 各容器 CPU/内存占用
 docker top hive-server            # 容器内进程列表
@@ -133,7 +190,7 @@ Hive 吃 1.5 GB 内存是正常的（Tez + JVM 堆），笔记本至少要留 4 
 
 ### 6. 进容器拷文件
 
-```bash
+```powershell
 docker cp hive-server:/opt/hive/conf/hive-site.xml .    # 容器 → 宿主
 docker cp ./data/ods_user.csv mysql:/tmp/               # 宿主 → 容器
 ```
@@ -168,7 +225,7 @@ docker cp ./data/ods_user.csv mysql:/tmp/               # 宿主 → 容器
 
 ## 三、镜像与磁盘
 
-```bash
+```powershell
 docker images                          # 本地镜像列表
 docker pull mysql:8.0                  # 只拉不跑
 docker rmi mysql:8.0                   # 删镜像（有容器在用会报错）
@@ -206,8 +263,8 @@ Docker Hub 在国内基本拉不动。本项目已在 `C:\Users\Lenovo\.docker\d
 
 改完必须 `docker desktop restart`（或 Docker Desktop 里 Restart）才生效，验证：
 
-```bash
-docker info | grep -A4 "Registry Mirrors"
+```powershell
+docker info | Select-String -Pattern "Registry Mirrors" -Context 0,4
 ```
 
 三个地址都列出来才算生效。实测速度 0.5～2.2 MB/s 之间波动，**镜像源会限速，慢的时候别以为卡死了**。
@@ -235,18 +292,35 @@ docker info | grep -A4 "Registry Mirrors"
 
 ## 六、答辩可直接演示的 30 秒
 
-```bash
-# 1. 环境活着（3 个 Up + 2 个 healthy）
+> 以下为 **PowerShell** 写法（每条单行，可直接整段粘贴）。上面三条均已在本机实跑验证。
+
+```powershell
+# 1. 环境活着（3 个容器 Up，其中 2 个 healthy）
 docker compose ps
 
 # 2. 元数据库真的初始化了（应输出 83）
-docker exec mysql mysql -uroot -proot -e \
-  "select count(*) from information_schema.tables where table_schema='metastore';"
+docker exec mysql mysql -uroot -proot -e "select count(*) from information_schema.tables where table_schema='metastore';" 2>$null
 
-# 3. 数据真的进了 Hive（应输出 1000 / 600 / 60 / 15600 / 37549 / 60000）
-docker exec -i hive-server beeline -u 'jdbc:hive2://localhost:10000/default' -e \
-  "select 'user',count(*) from ydsh_ods.ods_user
-   union all select 'order',count(*) from ydsh_ods.ods_order;"
+# 3. 数据真的进了 Hive（应输出 user 1000 / order 15600）
+docker exec -i hive-server beeline -u 'jdbc:hive2://localhost:10000/default' -e "select 'user',count(*) from ydsh_ods.ods_user union all select 'order',count(*) from ydsh_ods.ods_order;"
+```
+
+实测输出：
+
+```
+NAME             STATUS
+hive-metastore   Up 34 minutes (healthy)
+hive-server      Up 26 minutes
+mysql            Up 34 minutes (healthy)
+
+83
+
+|  _c0   |  _c1   |
+| user   | 1000   |
+| order  | 15600  |
 ```
 
 三条命令跑完，环境的真实性就没得质疑了。
+
+> **注意**：PowerShell 的续行符是反引号 `` ` ``，不是 bash 的 `\`。
+> 上面三条都刻意写成单行，就是避免换行符踩坑。要换行请用反引号，且反引号后不能有空格。
