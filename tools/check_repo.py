@@ -111,9 +111,13 @@ def main() -> int:
 
     # ---------- 6. 分支使用情况 ----------
     others = [b for b in branches if b not in ("main",)]
-    has_merge = bool(exempt)
+    # 用 git 自己判定合并节点：既覆盖自动生成的 "Merge branch ..."，
+    # 也覆盖团队约定的 "merge: ..." 提交，避免只看前缀造成误判
+    merge_nodes = [s for s in git("log", "--merges", "--format=%s").splitlines() if s.strip()]
+    has_merge = bool(merge_nodes)
     if has_merge:
-        results.append(("通过", "使用了分支与合并", f"历史中有 {len(exempt)} 个合并节点，分支痕迹可追溯"))
+        results.append(("通过", "使用了分支与合并",
+                        f"历史中有 {len(merge_nodes)} 个合并节点，分支痕迹可追溯"))
     elif others:
         results.append(("提示", "使用了分支与合并", f"存在其他分支（{', '.join(others[:3])}），但还没有合并记录"))
     else:
