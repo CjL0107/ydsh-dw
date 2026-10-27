@@ -47,6 +47,9 @@ target/
 node_modules/
 dist/
 
+# ---------- 文档生成脚本临时目录 ----------
+docs/.*.ref/
+
 # ---------- IDE 与系统 ----------
 .idea/
 .vscode/
