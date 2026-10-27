@@ -66,6 +66,35 @@ git config --global core.autocrlf false
 
 项目里已有 `.gitattributes` 强制 shell 脚本用 LF。如果不关掉 `autocrlf`，你队友在 WSL 里执行 `run_all.sh` 会报 `$'\r': command not found`——这个坑我们第一周就踩过。
 
+### 2.4 创建远程仓库与首次推送
+
+在 GitHub 上新建仓库时，**不要勾选** `Add a README file` / `.gitignore` / `license`。勾了会使远程自带一次提交，你的首次推送会因为「历史不相关」被拒绝，还得加 `--allow-unrelated-histories` 强合。
+
+```powershell
+git branch -M main                                    # 默认分支统一为 main
+git remote add origin git@github.com:你的账号/ydsh-dw.git
+git push -u origin main
+```
+
+**⚠️ 一个真实踩过的坑：远程默认分支还是 master。**
+
+本地把 `master` 改名成 `main` 并推送后，远程仓库的 HEAD 可能仍指向 `master`（新建的空仓库默认如此）。此时队友 `git clone` 下来会是**空目录**，并提示：
+
+```
+warning: remote HEAD refers to nonexistent ref, unable to checkout
+```
+
+GitHub 上在仓库 `Settings` → `Default branch` 改成 `main` 即可。
+如果用的是本地/自建裸仓库，用这条修正：
+
+```powershell
+git --git-dir=<裸仓库路径> symbolic-ref HEAD refs/heads/main
+```
+
+本项目演练时就是这个现象，改完 HEAD 后克隆立刻正常（9 次提交、分支 main）。
+
+**验收标准**：远程仓库主页能看到提交记录，且每位成员都能 `git clone` 出完整代码。
+
 ---
 
 ## 三、提交信息规范（核心）
