@@ -83,6 +83,13 @@ services:
     depends_on:
       hive-metastore:
         condition: service_started
+    # 【必须保留】Docker Desktop 重启后 hive-server 起不来的根治方案
+    # 症状：容器 Exited(1)，日志结尾 "HiveServer2 running as process 7. Stop it first."
+    # 原因：镜像把进程号写进 /opt/hive/conf/hiveserver2.pid，该文件留在容器可写层；
+    #      重启后新容器的入口 bash 恰好也是 PID 7，脚本误判服务已在运行而直接退出。
+    # 处理：启动前清掉这个残留 pid 文件。注意必须用 exec 保持 PID 1 交接，否则日志和信号会失效。
+    entrypoint: ["sh", "-c", "rm -f /opt/hive/conf/hiveserver2.pid && exec /entrypoint.sh"]
+    restart: unless-stopped
     environment:
       SERVICE_NAME: hiveserver2
       # IS_RESUME=true：元数据表已由 metastore 建好，这里跳过 schematool
