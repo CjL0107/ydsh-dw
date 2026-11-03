@@ -268,7 +268,7 @@ python tools/check_repo.py
 | 3 | 数仓架构设计文档 | [`docs/数仓架构设计文档.md`](docs/数仓架构设计文档.md) / `.docx` + `docs/screenshots/` 2 张架构图 | ✅ |
 | 4 | DWD 层建模与 ETL 脚本 | [`sql/dwd/`](sql/dwd/) | ✅ |
 | 5 | 探索性分析简报 | [`docs/探索性分析简报.md`](docs/探索性分析简报.md) / `.docx` | ✅ |
-| 6 | Git 提交记录 | `git log --oneline`（本周 8 次提交，按子任务拆分） | ✅ |
+| 6 | Git 提交记录 | `git log --oneline`（按子任务拆分，逐次记录见包内 `提交历史.txt`） | ✅ |
 
 **第 2 周关键指标**
 
