@@ -268,7 +268,7 @@ python tools/check_repo.py
 | 3 | 数仓架构设计文档 | [`docs/数仓架构设计文档.md`](docs/数仓架构设计文档.md) / `.docx` + `docs/screenshots/` 2 张架构图 | ✅ |
 | 4 | DWD 层建模与 ETL 脚本 | [`sql/dwd/`](sql/dwd/) | ✅ |
 | 5 | 探索性分析简报 | [`docs/探索性分析简报.md`](docs/探索性分析简报.md) / `.docx` | ✅ |
-| 6 | Git 提交记录 | `git log --oneline`（本周 7 次提交，按子任务拆分） | ✅ |
+| 6 | Git 提交记录 | `git log --oneline`（本周 8 次提交，按子任务拆分） | ✅ |
 
 **第 2 周关键指标**
 
@@ -283,4 +283,4 @@ python tools/check_repo.py
 | 外键完整性 | 6 项校验全部 0 孤儿 |
 | 有效订单 / GMV / 客单价 | 10,809 单 / 2,734.28 万元 / 2,529.64 元 |
 
-> 打包提交时压缩包命名为 `第2周_梁常金.zip`，内容为整个项目目录（数据 CSV 按 .gitignore 规则排除）。
+> 打包提交时压缩包命名为 `第2周_提交.zip`（对齐任务书《第2周作业任务与提交清单》），内容为整个项目目录（数据 CSV 按 .gitignore 规则排除）。
