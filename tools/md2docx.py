@@ -202,6 +202,14 @@ def add_image(doc, path, alt):
     p.paragraph_format.space_after = Pt(4)
     p.add_run().add_picture(path, width=Cm(15.2))
 
+    if alt:
+        cap = doc.add_paragraph()
+        cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        cap.paragraph_format.space_before = Pt(2)
+        cap.paragraph_format.space_after = Pt(10)
+        cr = cap.add_run(alt)
+        set_run_font(cr, size=9, color=GRAY)
+
 
 def add_quote(doc, lines):
     for ln in lines:
