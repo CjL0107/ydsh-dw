@@ -58,7 +58,7 @@ FROM (
         SUM(IF(status_code = 'OS05', 1, 0)) / COUNT(*)                            AS refund_rate,
         SUM(IF(status_code = 'OS01', 1, 0)) / COUNT(*)                            AS wait_pay_rate,
         SUM(IF(status_code IN ('OS02','OS03','OS05'), pay_amount, 0))
-          / SUM(IF(status_code IN ('OS02','OS03','OS05'), 1, 0))                  AS aov
+          / NULLIF(SUM(IF(status_code IN ('OS02','OS03','OS05'), 1, 0)), 0)       AS aov
       FROM ydsh_dwd.dwd_order
     ) o
     CROSS JOIN (
