@@ -10,7 +10,6 @@ set -uo pipefail
 
 REMOTE="${1:-origin}"
 BRANCH="${2:-main}"
-PROBE_URL="https://api.github.com/zen"
 CANDIDATES=""
 
 cd "$(dirname "$0")/.." || exit 1
@@ -31,11 +30,17 @@ fi
 echo "    候选端口：$(echo "$CANDIDATES" | tr '\n' ' ')"
 
 echo "==> 2/3 逐个探测能否穿透 GitHub"
+# 判据用 git ls-remote 而不是 curl：
+#   curl 只发一个几 KB 的 GET，代理能转发不代表 git 的 packfile 传输能过。
+#   实测遇到过 curl 返回正常、但 git push 反复 502 的端口，所以必须用
+#   真实的 git 协议握手来筛。
 WORKING=""
 for p in $CANDIDATES; do
-  out=$(curl -s -m 4 -x "http://127.0.0.1:$p" "$PROBE_URL" 2>/dev/null)
-  if [ -n "$out" ] && [ "${out:0:1}" != "<" ]; then
-    echo "    ✔ 127.0.0.1:$p  ->  $out"
+  if timeout 8 git -c "http.proxy=http://127.0.0.1:$p" \
+         -c "https.proxy=http://127.0.0.1:$p" \
+         -c http.lowSpeedLimit=1 -c http.lowSpeedTime=4 \
+         ls-remote --heads "$REMOTE" >/dev/null 2>&1; then
+    echo "    ✔ 127.0.0.1:$p  git 握手成功"
     WORKING="$p"
     break
   fi

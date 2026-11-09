@@ -378,7 +378,16 @@ def convert(md_path, docx_path, title, subtitle, meta_lines):
         m = re.match(r"^!\[(.*?)\]\((.*?)\)\s*$", line)
         if m:
             flush_para()
-            add_image(doc, os.path.join(base_dir, m.group(2)), m.group(1))
+            rel = m.group(2)
+            p_join = os.path.join(base_dir, rel)
+            # md 在 docs/ 下、图片写的是仓库根相对路径时，退回仓库根再找一次
+            if not os.path.exists(p_join):
+                p_root = os.path.join(
+                    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), rel
+                )
+                if os.path.exists(p_root):
+                    p_join = p_root
+            add_image(doc, p_join, m.group(1))
             continue
 
         m = re.match(r"^(\s*)[-*]\s+(.*)$", line)
