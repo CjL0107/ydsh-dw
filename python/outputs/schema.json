@@ -1,0 +1,429 @@
+{
+  "generated_at": "2026-11-09 08:49:16",
+  "databases": {
+    "ydsh_dws": {
+      "dws_sales_category_day": {
+        "note": "品类×天汇总。gmv_alloc 是按明细占比分摊后的 GMV。问「某品类销售额」用这张",
+        "columns": [
+          {
+            "name": "stat_date",
+            "type": "string",
+            "comment": "????"
+          },
+          {
+            "name": "category",
+            "type": "string",
+            "comment": "????"
+          },
+          {
+            "name": "order_cnt",
+            "type": "int",
+            "comment": "???????????"
+          },
+          {
+            "name": "item_qty",
+            "type": "int",
+            "comment": "????"
+          }
+        ]
+      },
+      "dws_sales_channel_day": {
+        "note": "渠道×天汇总（APP/小程序/PC官网/门店）",
+        "columns": [
+          {
+            "name": "stat_date",
+            "type": "string",
+            "comment": "????"
+          },
+          {
+            "name": "channel_code",
+            "type": "string",
+            "comment": "???? CH01~CH04"
+          },
+          {
+            "name": "channel",
+            "type": "string",
+            "comment": "????"
+          },
+          {
+            "name": "paid_order_cnt",
+            "type": "int",
+            "comment": "?????"
+          },
+          {
+            "name": "user_cnt",
+            "type": "int",
+            "comment": "???????"
+          }
+        ]
+      },
+      "dws_sales_day": {
+        "note": "销售日汇总（全站）。按天一行，含 GMV、订单量、客单价、取消率。问「某天/某月/某段时间的销售额」优先用这张表",
+        "columns": [
+          {
+            "name": "stat_date",
+            "type": "string",
+            "comment": "???? yyyy-MM-dd"
+          },
+          {
+            "name": "order_cnt",
+            "type": "int",
+            "comment": "??????????"
+          },
+          {
+            "name": "paid_order_cnt",
+            "type": "int",
+            "comment": "??????OS02/OS03/OS05?"
+          },
+          {
+            "name": "cancel_order_cnt",
+            "type": "int",
+            "comment": "??????OS04?"
+          },
+          {
+            "name": "wait_pay_cnt",
+            "type": "int",
+            "comment": "???????OS01?"
+          },
+          {
+            "name": "user_cnt",
+            "type": "int",
+            "comment": "?????????"
+          },
+          {
+            "name": "paid_user_cnt",
+            "type": "int",
+            "comment": "???????????"
+          },
+          {
+            "name": "item_qty",
+            "type": "int",
+            "comment": "??????????????"
+          }
+        ]
+      },
+      "dws_sales_month": {
+        "note": "销售月汇总，含环比 mom_rate",
+        "columns": [
+          {
+            "name": "year_month",
+            "type": "string",
+            "comment": "?? yyyy-MM"
+          },
+          {
+            "name": "paid_order_cnt",
+            "type": "int",
+            "comment": "?????"
+          },
+          {
+            "name": "paid_user_cnt",
+            "type": "int",
+            "comment": "???????"
+          }
+        ]
+      },
+      "dws_sales_store_day": {
+        "note": "门店×天汇总，含省份城市与门店分级。问「某省/某市/某门店销售额」用这张",
+        "columns": [
+          {
+            "name": "stat_date",
+            "type": "string",
+            "comment": "????"
+          },
+          {
+            "name": "store_id",
+            "type": "string",
+            "comment": "?? ID"
+          },
+          {
+            "name": "store_name",
+            "type": "string",
+            "comment": "????"
+          },
+          {
+            "name": "province",
+            "type": "string",
+            "comment": "??"
+          },
+          {
+            "name": "city",
+            "type": "string",
+            "comment": "??"
+          },
+          {
+            "name": "store_level",
+            "type": "string",
+            "comment": "????????/???/????"
+          },
+          {
+            "name": "paid_order_cnt",
+            "type": "int",
+            "comment": "?????"
+          },
+          {
+            "name": "user_cnt",
+            "type": "int",
+            "comment": "???????"
+          }
+        ]
+      },
+      "dws_sales_week": {
+        "note": "销售周汇总，含周一日期",
+        "columns": [
+          {
+            "name": "year_week",
+            "type": "string",
+            "comment": "???? yyyy-Www"
+          },
+          {
+            "name": "week_start",
+            "type": "string",
+            "comment": "????"
+          },
+          {
+            "name": "week_end",
+            "type": "string",
+            "comment": "????"
+          },
+          {
+            "name": "paid_order_cnt",
+            "type": "int",
+            "comment": "?????"
+          },
+          {
+            "name": "paid_user_cnt",
+            "type": "int",
+            "comment": "???????"
+          }
+        ]
+      },
+      "dws_user_order_agg": {
+        "note": "用户级汇总：首单/末单日期、订单数、累计消费、省份。问「用户消费排名/复购」用这张",
+        "columns": [
+          {
+            "name": "user_id",
+            "type": "string",
+            "comment": "?? ID"
+          },
+          {
+            "name": "first_order_date",
+            "type": "string",
+            "comment": "????"
+          },
+          {
+            "name": "last_order_date",
+            "type": "string",
+            "comment": "????"
+          },
+          {
+            "name": "order_cnt",
+            "type": "int",
+            "comment": "?????"
+          },
+          {
+            "name": "active_days",
+            "type": "int",
+            "comment": "????????"
+          },
+          {
+            "name": "province",
+            "type": "string",
+            "comment": "?????????"
+          },
+          {
+            "name": "region",
+            "type": "string",
+            "comment": "??"
+          },
+          {
+            "name": "member_level",
+            "type": "string",
+            "comment": "????"
+          }
+        ]
+      }
+    },
+    "ydsh_ads": {
+      "ads_category_top10": {
+        "note": "品类销售额 TopN，含占比 gmv_share",
+        "columns": [
+          {
+            "name": "rank_no",
+            "type": "int",
+            "comment": "??"
+          },
+          {
+            "name": "category",
+            "type": "string",
+            "comment": "??"
+          },
+          {
+            "name": "order_cnt",
+            "type": "int",
+            "comment": "???"
+          },
+          {
+            "name": "item_qty",
+            "type": "int",
+            "comment": "????"
+          }
+        ]
+      },
+      "ads_channel_contribution": {
+        "note": "渠道贡献，含 GMV 占比与客单价",
+        "columns": [
+          {
+            "name": "channel",
+            "type": "string",
+            "comment": "??"
+          },
+          {
+            "name": "channel_code",
+            "type": "string",
+            "comment": "????"
+          },
+          {
+            "name": "order_cnt",
+            "type": "int",
+            "comment": "???"
+          },
+          {
+            "name": "user_cnt",
+            "type": "int",
+            "comment": "???"
+          }
+        ]
+      },
+      "ads_kpi_summary": {
+        "note": "核心 KPI 竖表（一行一个指标），含口径说明 definition。问「整体 GMV/客单价/复购率是多少」用这张",
+        "columns": [
+          {
+            "name": "metric_key",
+            "type": "string",
+            "comment": "?????"
+          },
+          {
+            "name": "metric_name",
+            "type": "string",
+            "comment": "?????"
+          },
+          {
+            "name": "unit",
+            "type": "string",
+            "comment": "????/?/?/%?"
+          },
+          {
+            "name": "definition",
+            "type": "string",
+            "comment": "????"
+          },
+          {
+            "name": "stat_period",
+            "type": "string",
+            "comment": "???? 2024 ??"
+          }
+        ]
+      },
+      "ads_province_top10": {
+        "note": "省份销售额 TopN",
+        "columns": [
+          {
+            "name": "rank_no",
+            "type": "int",
+            "comment": "??"
+          },
+          {
+            "name": "province",
+            "type": "string",
+            "comment": "??"
+          },
+          {
+            "name": "order_cnt",
+            "type": "int",
+            "comment": "???"
+          },
+          {
+            "name": "user_cnt",
+            "type": "int",
+            "comment": "???"
+          }
+        ]
+      },
+      "ads_sales_daily_report": {
+        "note": "销售日报，含日环比 gmv_dod、7 日移动平均、上周同日对比",
+        "columns": [
+          {
+            "name": "stat_date",
+            "type": "string",
+            "comment": "??"
+          },
+          {
+            "name": "weekday_name",
+            "type": "string",
+            "comment": "??"
+          },
+          {
+            "name": "is_weekend",
+            "type": "int",
+            "comment": "????"
+          },
+          {
+            "name": "paid_order_cnt",
+            "type": "int",
+            "comment": "?????"
+          }
+        ]
+      },
+      "ads_store_top10": {
+        "note": "门店销售额 TopN",
+        "columns": [
+          {
+            "name": "rank_no",
+            "type": "int",
+            "comment": "??"
+          },
+          {
+            "name": "store_id",
+            "type": "string",
+            "comment": "?? ID"
+          },
+          {
+            "name": "store_name",
+            "type": "string",
+            "comment": "????"
+          },
+          {
+            "name": "city",
+            "type": "string",
+            "comment": "??"
+          },
+          {
+            "name": "store_level",
+            "type": "string",
+            "comment": "????"
+          },
+          {
+            "name": "order_cnt",
+            "type": "int",
+            "comment": "???"
+          }
+        ]
+      },
+      "ads_user_value_segmentation": {
+        "note": "用户 RFM 八分层结果，含人数/GMV/人均消费",
+        "columns": [
+          {
+            "name": "segment",
+            "type": "string",
+            "comment": "??????"
+          },
+          {
+            "name": "user_cnt",
+            "type": "int",
+            "comment": "???"
+          }
+        ]
+      }
+    }
+  }
+}
