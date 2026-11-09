@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-09 08:49:16",
+  "generated_at": "2026-11-09 09:29:16",
   "databases": {
     "ydsh_dws": {
       "dws_sales_category_day": {
@@ -8,22 +8,22 @@
           {
             "name": "stat_date",
             "type": "string",
-            "comment": "????"
+            "comment": "统计日期"
           },
           {
             "name": "category",
             "type": "string",
-            "comment": "????"
+            "comment": "一级品类"
           },
           {
             "name": "order_cnt",
             "type": "int",
-            "comment": "???????????"
+            "comment": "涉及该品类的有效订单数"
           },
           {
             "name": "item_qty",
             "type": "int",
-            "comment": "????"
+            "comment": "销售件数"
           }
         ]
       },
@@ -33,27 +33,27 @@
           {
             "name": "stat_date",
             "type": "string",
-            "comment": "????"
+            "comment": "统计日期"
           },
           {
             "name": "channel_code",
             "type": "string",
-            "comment": "???? CH01~CH04"
+            "comment": "渠道编码 CH01~CH04"
           },
           {
             "name": "channel",
             "type": "string",
-            "comment": "????"
+            "comment": "渠道名称"
           },
           {
             "name": "paid_order_cnt",
             "type": "int",
-            "comment": "?????"
+            "comment": "有效订单量"
           },
           {
             "name": "user_cnt",
             "type": "int",
-            "comment": "???????"
+            "comment": "有效订单用户数"
           }
         ]
       },
@@ -63,42 +63,42 @@
           {
             "name": "stat_date",
             "type": "string",
-            "comment": "???? yyyy-MM-dd"
+            "comment": "统计日期 yyyy-MM-dd"
           },
           {
             "name": "order_cnt",
             "type": "int",
-            "comment": "??????????"
+            "comment": "下单量（含全部状态）"
           },
           {
             "name": "paid_order_cnt",
             "type": "int",
-            "comment": "??????OS02/OS03/OS05?"
+            "comment": "有效订单量（OS02/OS03/OS05）"
           },
           {
             "name": "cancel_order_cnt",
             "type": "int",
-            "comment": "??????OS04?"
+            "comment": "取消订单量（OS04）"
           },
           {
             "name": "wait_pay_cnt",
             "type": "int",
-            "comment": "???????OS01?"
+            "comment": "待支付订单量（OS01）"
           },
           {
             "name": "user_cnt",
             "type": "int",
-            "comment": "?????????"
+            "comment": "下单用户数（去重）"
           },
           {
             "name": "paid_user_cnt",
             "type": "int",
-            "comment": "???????????"
+            "comment": "有效订单用户数（去重）"
           },
           {
             "name": "item_qty",
             "type": "int",
-            "comment": "??????????????"
+            "comment": "销售件数（有效订单对应明细）"
           }
         ]
       },
@@ -108,17 +108,17 @@
           {
             "name": "year_month",
             "type": "string",
-            "comment": "?? yyyy-MM"
+            "comment": "年月 yyyy-MM"
           },
           {
             "name": "paid_order_cnt",
             "type": "int",
-            "comment": "?????"
+            "comment": "有效订单量"
           },
           {
             "name": "paid_user_cnt",
             "type": "int",
-            "comment": "???????"
+            "comment": "有效订单用户数"
           }
         ]
       },
@@ -128,42 +128,42 @@
           {
             "name": "stat_date",
             "type": "string",
-            "comment": "????"
+            "comment": "统计日期"
           },
           {
             "name": "store_id",
             "type": "string",
-            "comment": "?? ID"
+            "comment": "门店 ID"
           },
           {
             "name": "store_name",
             "type": "string",
-            "comment": "????"
+            "comment": "门店名称"
           },
           {
             "name": "province",
             "type": "string",
-            "comment": "??"
+            "comment": "省份"
           },
           {
             "name": "city",
             "type": "string",
-            "comment": "??"
+            "comment": "城市"
           },
           {
             "name": "store_level",
             "type": "string",
-            "comment": "????????/???/????"
+            "comment": "门店分级（旗舰店/标准店/社区店）"
           },
           {
             "name": "paid_order_cnt",
             "type": "int",
-            "comment": "?????"
+            "comment": "有效订单量"
           },
           {
             "name": "user_cnt",
             "type": "int",
-            "comment": "???????"
+            "comment": "有效订单用户数"
           }
         ]
       },
@@ -173,27 +173,27 @@
           {
             "name": "year_week",
             "type": "string",
-            "comment": "???? yyyy-Www"
+            "comment": "年周标识 yyyy-Www"
           },
           {
             "name": "week_start",
             "type": "string",
-            "comment": "????"
+            "comment": "周一日期"
           },
           {
             "name": "week_end",
             "type": "string",
-            "comment": "????"
+            "comment": "周日日期"
           },
           {
             "name": "paid_order_cnt",
             "type": "int",
-            "comment": "?????"
+            "comment": "有效订单量"
           },
           {
             "name": "paid_user_cnt",
             "type": "int",
-            "comment": "???????"
+            "comment": "有效订单用户数"
           }
         ]
       },
@@ -203,42 +203,42 @@
           {
             "name": "user_id",
             "type": "string",
-            "comment": "?? ID"
+            "comment": "用户 ID"
           },
           {
             "name": "first_order_date",
             "type": "string",
-            "comment": "????"
+            "comment": "首单日期"
           },
           {
             "name": "last_order_date",
             "type": "string",
-            "comment": "????"
+            "comment": "末单日期"
           },
           {
             "name": "order_cnt",
             "type": "int",
-            "comment": "?????"
+            "comment": "有效订单数"
           },
           {
             "name": "active_days",
             "type": "int",
-            "comment": "????????"
+            "comment": "有下单行为的天数"
           },
           {
             "name": "province",
             "type": "string",
-            "comment": "?????????"
+            "comment": "省份（来自维度表）"
           },
           {
             "name": "region",
             "type": "string",
-            "comment": "??"
+            "comment": "大区"
           },
           {
             "name": "member_level",
             "type": "string",
-            "comment": "????"
+            "comment": "会员等级"
           }
         ]
       }
@@ -250,22 +250,22 @@
           {
             "name": "rank_no",
             "type": "int",
-            "comment": "??"
+            "comment": "排名"
           },
           {
             "name": "category",
             "type": "string",
-            "comment": "??"
+            "comment": "品类"
           },
           {
             "name": "order_cnt",
             "type": "int",
-            "comment": "???"
+            "comment": "订单数"
           },
           {
             "name": "item_qty",
             "type": "int",
-            "comment": "????"
+            "comment": "销售件数"
           }
         ]
       },
@@ -275,22 +275,22 @@
           {
             "name": "channel",
             "type": "string",
-            "comment": "??"
+            "comment": "渠道"
           },
           {
             "name": "channel_code",
             "type": "string",
-            "comment": "????"
+            "comment": "渠道编码"
           },
           {
             "name": "order_cnt",
             "type": "int",
-            "comment": "???"
+            "comment": "订单数"
           },
           {
             "name": "user_cnt",
             "type": "int",
-            "comment": "???"
+            "comment": "用户数"
           }
         ]
       },
@@ -300,27 +300,27 @@
           {
             "name": "metric_key",
             "type": "string",
-            "comment": "?????"
+            "comment": "指标英文键"
           },
           {
             "name": "metric_name",
             "type": "string",
-            "comment": "?????"
+            "comment": "指标中文名"
           },
           {
             "name": "unit",
             "type": "string",
-            "comment": "????/?/?/%?"
+            "comment": "单位（元/单/人/%）"
           },
           {
             "name": "definition",
             "type": "string",
-            "comment": "????"
+            "comment": "口径说明"
           },
           {
             "name": "stat_period",
             "type": "string",
-            "comment": "???? 2024 ??"
+            "comment": "统计周期 2024 全年"
           }
         ]
       },
@@ -330,22 +330,22 @@
           {
             "name": "rank_no",
             "type": "int",
-            "comment": "??"
+            "comment": "排名"
           },
           {
             "name": "province",
             "type": "string",
-            "comment": "??"
+            "comment": "省份"
           },
           {
             "name": "order_cnt",
             "type": "int",
-            "comment": "???"
+            "comment": "订单数"
           },
           {
             "name": "user_cnt",
             "type": "int",
-            "comment": "???"
+            "comment": "用户数"
           }
         ]
       },
@@ -355,22 +355,22 @@
           {
             "name": "stat_date",
             "type": "string",
-            "comment": "??"
+            "comment": "日期"
           },
           {
             "name": "weekday_name",
             "type": "string",
-            "comment": "??"
+            "comment": "星期"
           },
           {
             "name": "is_weekend",
             "type": "int",
-            "comment": "????"
+            "comment": "是否周末"
           },
           {
             "name": "paid_order_cnt",
             "type": "int",
-            "comment": "?????"
+            "comment": "有效订单量"
           }
         ]
       },
@@ -380,32 +380,32 @@
           {
             "name": "rank_no",
             "type": "int",
-            "comment": "??"
+            "comment": "排名"
           },
           {
             "name": "store_id",
             "type": "string",
-            "comment": "?? ID"
+            "comment": "门店 ID"
           },
           {
             "name": "store_name",
             "type": "string",
-            "comment": "????"
+            "comment": "门店名称"
           },
           {
             "name": "city",
             "type": "string",
-            "comment": "??"
+            "comment": "城市"
           },
           {
             "name": "store_level",
             "type": "string",
-            "comment": "????"
+            "comment": "门店分级"
           },
           {
             "name": "order_cnt",
             "type": "int",
-            "comment": "???"
+            "comment": "订单数"
           }
         ]
       },
@@ -415,12 +415,12 @@
           {
             "name": "segment",
             "type": "string",
-            "comment": "??????"
+            "comment": "客户分层名称"
           },
           {
             "name": "user_cnt",
             "type": "int",
-            "comment": "???"
+            "comment": "用户数"
           }
         ]
       }
