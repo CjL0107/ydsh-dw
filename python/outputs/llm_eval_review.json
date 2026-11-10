@@ -1,0 +1,38 @@
+{
+  "_meta": {
+    "对应运行": "2026-11-10 08:16:15 / deepseek-flash",
+    "说明": "复核针对 llm_eval.json 里记录的那次运行。同一题重跑会生成不同 SQL，换一次运行必须重新复核。"
+  },
+  "1": {
+    "verdict": "正确",
+    "note": "显式加了 stat_date BETWEEN '2024-01-01' AND '2024-12-31'。本数据集恰好只有 2024 年数据，但模型不知道这点，主动加约束是对的。结果 27,342,828.20 与 DWS 一致。"
+  },
+  "2": {
+    "verdict": "错误",
+    "note": "写的是 SELECT metric_key, metric_name, unit, definition FROM ads_kpi_summary WHERE metric_name LIKE '%客单价%'——选对了表、选对了过滤条件，但**把 metric_value 漏了**。结果返回 1 行，全是元信息，没有数值。这是最阴的一类错误：行数非空、执行成功、看起来一切正常，唯独答案不在里面。上一轮同一道题它写的是 SUM(gmv)/SUM(paid_order_cnt) 自算，两次结果完全不同。"
+  },
+  "3": {
+    "verdict": "部分正确",
+    "note": "返回 rank_no、category、gmv、item_qty，但排序直接沿用 rank_no。而 rank_no 在 ETL 里是 ROW_NUMBER() OVER (ORDER BY gmv DESC)，按 GMV 排的。题目问「销量最高」，它给的是「GMV 前 5 名及其件数」。题目本身有歧义（销量指 GMV 还是件数），但模型既没按件数重排也没澄清歧义，属于照搬现成排名。"
+  },
+  "4": {
+    "verdict": "正确",
+    "note": "返回 channel、gmv、gmv_share 三列，比只给占比更有用。严格判据判「不一致」只因多带了一列 gmv，不是算错——这正是补宽松判据的原因。占比合计与 ADS 层一致。"
+  },
+  "5": {
+    "verdict": "正确",
+    "note": "自己写了 SUM(CASE WHEN order_cnt > 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) 去 dws_user_order_agg 算，口径与 KPI 表的 repeat_rate（复购用户数/去重用户数）一致，实测 1000 用户全部 order_cnt>1，结果 100% 正确。但它绕开了已定义好的 KPI 表，等于把指标口径复制了一份到 SQL 里——KPI 定义一变，这条 SQL 会静默给出旧口径。上一轮它写的是 WHERE metric_name='复购率' OR metric_key='repurchase_rate'（后者根本不存在，靠中文名兜住）。"
+  },
+  "6": {
+    "verdict": "错误",
+    "note": "写成 province = '广东'，而维度表实际取值是「广东省」，等值匹配 0 行，SUM 返回 NULL。正是本题 probe 预判的坑，也是 NL2SQL 最典型的一类错误：把「用户怎么说」当成「字段里怎么存」。正确写法是 LIKE '%广东%'。执行成功、无报错，只能靠人看出来。"
+  },
+  "7": {
+    "verdict": "正确",
+    "note": "子查询先 ORDER BY stat_date DESC LIMIT 7 取最近 7 天，外层再按时间正序输出，比参考 SQL 直接倒序更贴合阅读习惯。"
+  },
+  "8": {
+    "verdict": "正确",
+    "note": "日期字面量写成 '2024-11-06'，格式正确，命中 1 行，结果 37,739.92 与 DWS 一致，没踩 2024/11/06 查出 0 行的坑。"
+  }
+}
