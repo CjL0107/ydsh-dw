@@ -84,8 +84,8 @@ LIKE 模糊     province LIKE '%广东%' → 放行（模糊匹配本来就能�
 | 深圳市 2024 销售额 | — | `WHERE city = '深圳'` | 未写"深圳市"，一次就对 |
 | 数码家电品类全年 | — | `WHERE category = '数码家电'` | 口径正确 |
 
-**成本**：prompt 从约 1,500 tokens 涨到约 3,050 tokens，翻了一倍。
-8 个维度、93 个取值全量注入，没有做相关性裁剪。
+**成本**：prompt 从约 1,500 tokens 涨到约 3,050 tokens，翻了一倍；schema 补齐 42 列后再涨到约 3,700。
+8 个维度、108 个取值全量注入，没有做相关性裁剪。
 
 这个代价需要说清楚：如果只注入与问题相关的维度（问题里出现"广东"才注入省份表），
 可以把增量压到 200 tokens 以内。但裁剪依赖意图识别，识别错了就漏注入，
@@ -122,22 +122,31 @@ stdout 为空，`run_sql()` 解析出零行并 `return []`；
 
 ---
 
-## 五、状态：整轮复测未完成
+## 五、状态：整轮复测已完成
 
-Docker Desktop 在本机异常退出，`docker desktop restart` 也未能拉起引擎
-（`docker ps` 报 `open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified`），
-所以**改造后的整轮 8 题复测没有跑成**。
+Docker Desktop 恢复、`mysql` 与 `hive-metastore` 两个容器重新拉起后，整轮复测已跑完。
 
-本文件第三节的四条结论来自单题验证，均在有数据的 Hive 上执行，可信。
-整轮对比（4/8 → ?）等环境恢复后补跑，届时会更新本节。
-仓库里的 `python/outputs/llm_eval.*` 暂时保留**改造前**的数据，
-不用那次假的 8/8 覆盖——留着错的成绩比没有成绩更坏。
+环境恢复过程中还确认了一件事：容器 `State` 显示 `Up` 不代表服务可用。
+这次 `hive-server` 是 `Up`，但 `mysql` 与 `hive-metastore` 都是 `Exited (255)`，
+HS2 连不上 metastore，10000 端口根本没有监听。所以"容器起来了"要看的是**端口通不通、SQL 能不能跑**，
+不是 `docker ps` 里那行绿字。
 
-待环境恢复后执行：
+| 阶段 | Schema 字段 | 执行成功 | 严格一致 | 宽松一致 | 人工正确 |
+|---|---|---|---|---|---|
+| 改造前 | 70 | 8/8 | 4/8 | 6/8 | 5/8 |
+| 维度值注入后（当时 Docker 挂、为假 8/8，已作废） | 70 | — | — | — | — |
+| 最终（维度注入 + 修复 decimal 列丢失） | 112 | 8/8 | 7/8 | 8/8 | 7/8 |
+
+期间发现的第二个 bug（42 个 decimal 列被静默丢弃）见第七节——它比维度注入本身影响更大。
+
+仓库里的 `python/outputs/llm_eval.*` 已用本轮真实数据覆盖，作废那次假的 8/8 没有留存。
+
+复现命令：
 
 ```bash
 python python/nl2sql_schema.py      # 重抽 schema + 维度取值
 python python/validate_llm.py       # 整轮 8 题复测
+python python/validate_llm.py --reuse   # 只改人工复核、重渲染报表，不再花 token
 ```
 
 同一个时间点上，网络也出了问题，导致本分支**没能推到远端**：

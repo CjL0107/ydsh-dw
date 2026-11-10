@@ -1,9 +1,9 @@
 # 大模型真实调用验证结果
 
-- 执行时间：2026-11-10 08:16:15
+- 执行时间：2026-11-10 09:38:09
 - 服务商 / 模型：deepseek / deepseek-flash
-- 题目数：8　执行成功：8/8　严格一致：4/8　宽松一致：6/8　人工判定正确：5/8
-- 累计 prompt tokens：12,093　累计耗时：16.02s　平均单题：2.00s
+- 题目数：8　执行成功：8/8　严格一致：7/8　宽松一致：8/8　人工判定正确：7/8
+- 累计 prompt tokens：29,653　累计耗时：12.13s　平均单题：1.52s
 
 > 三个判据回答三个不同问题：**执行成功**=SQL 能在 Hive 上跑通；**严格一致**=数值集合与参考 SQL 完全对应；**宽松一致**=参考结果的数值都被覆盖（允许多查列）。**都不是「语义正确」**——语义由人工复核，见最后一列。
 
@@ -11,43 +11,43 @@
 
 | # | 问题 | 执行 | 严格 | 宽松 | 耗时(s) | tokens | 人工复核 |
 |---|------|------|------|------|---------|--------|----------|
-| 1 | 2024 年全年 GMV 是多少？ | 成功 | ✔ | ✔ | 1.85 | 1513 | 正确 |
-| 2 | 客单价是多少？ | 成功 | — | ✘ | 2.35 | 1507 | 错误 |
-| 3 | 销量最高的前 5 个品类有哪些？ | 成功 | — | ✔ | 1.43 | 1513 | 部分正确 |
-| 4 | 各渠道的 GMV 占比是多少？ | 成功 | — | ✔ | 1.08 | 1512 | 正确 |
-| 5 | 复购率是多少？ | 成功 | ✔ | ✔ | 3.93 | 1508 | 正确 |
-| 6 | 广东省全年销售额是多少？ | 成功 | — | ✘ | 1.4 | 1508 | 错误 |
-| 7 | 最近 7 天每天的下单量 | 成功 | ✔ | ✔ | 2.53 | 1512 | 正确 |
-| 8 | 2024 年 11 月 6 日的 GMV 是多少？ | 成功 | ✔ | ✔ | 1.45 | 1520 | 正确 |
+| 1 | 2024 年全年 GMV 是多少？ | 成功 | ✔ | ✔ | 1.3 | 3708 | 正确 |
+| 2 | 客单价是多少？ | 成功 | ✔ | ✔ | 1.42 | 3702 | 正确 |
+| 3 | 销量最高的前 5 个品类有哪些？ | 成功 | ✔ | ✔ | 2.42 | 3708 | 部分正确 |
+| 4 | 各渠道的 GMV 占比是多少？ | 成功 | — | ✔ | 0.88 | 3707 | 正确 |
+| 5 | 复购率是多少？ | 成功 | ✔ | ✔ | 1.03 | 3703 | 正确 |
+| 6 | 广东省全年销售额是多少？ | 成功 | ✔ | ✔ | 1.18 | 3703 | 正确 |
+| 7 | 最近 7 天每天的下单量 | 成功 | ✔ | ✔ | 2.88 | 3707 | 正确 |
+| 8 | 2024 年 11 月 6 日的 GMV 是多少？ | 成功 | ✔ | ✔ | 1.02 | 3715 | 正确 |
 
 ## 模型生成的 SQL 与比对说明
 
 **1. 2024 年全年 GMV 是多少？**　`全表聚合，考表选择与聚合函数`
 
 ```sql
-SELECT ROUND(SUM(gmv), 2) AS gmv FROM ydsh_dws.dws_sales_day WHERE stat_date BETWEEN '2024-01-01' AND '2024-12-31'
+SELECT metric_name, ROUND(metric_value, 2) AS metric_value, unit FROM ydsh_ads.ads_kpi_summary WHERE metric_key = 'gmv' AND stat_period = '2024 全年'
 ```
 结果 1 行，与参考 SQL：一致；重试 0 次
 
-人工复核：**正确** — 显式加了 stat_date BETWEEN '2024-01-01' AND '2024-12-31'。本数据集恰好只有 2024 年数据，但模型不知道这点，主动加约束是对的。结果 27,342,828.20 与 DWS 一致。
+人工复核：**正确** — 改走 KPI 宽表：metric_key = 'gmv' AND stat_period = '2024 全年'，取 metric_value 得 27,342,828.20。与 DWS 全表汇总、渠道合计、门店合计三处交叉验证完全一致。上一轮它写的是 SUM(gmv) 直接扫 dws_sales_day；两种写法都对，这次选了带口径定义的 KPI 表，反而更稳。stat_period = '2024 全年' 这个取值不在原始 Prompt 里，是它按 schema 注释推出来的。
 
 **2. 客单价是多少？**　`考 KPI 宽表的 metric_key 过滤；易错点是自己去算 SUM/COUNT 导致口径不一致`
 
 ```sql
-SELECT metric_key, metric_name, unit, definition FROM ydsh_ads.ads_kpi_summary WHERE metric_name LIKE '%客单价%'
+SELECT metric_name, metric_value, unit FROM ydsh_ads.ads_kpi_summary WHERE metric_key = 'aov'
 ```
-结果 1 行，与参考 SQL：缺值：参考中的 2,529.64 在模型结果里找不到（模型 0 值 / 参考 1 值）；重试 0 次
+结果 1 行，与参考 SQL：一致；重试 0 次
 
-人工复核：**错误** — 写的是 SELECT metric_key, metric_name, unit, definition FROM ads_kpi_summary WHERE metric_name LIKE '%客单价%'——选对了表、选对了过滤条件，但**把 metric_value 漏了**。结果返回 1 行，全是元信息，没有数值。这是最阴的一类错误：行数非空、执行成功、看起来一切正常，唯独答案不在里面。上一轮同一道题它写的是 SUM(gmv)/SUM(paid_order_cnt) 自算，两次结果完全不同。
+人工复核：**正确** — metric_key = 'aov' 直查 metric_value = 2529.6400，与参考一致。上一轮同类题它选对了过滤条件却漏选 metric_value（只返回元信息、行数非空但答案不在里面）；本轮 metric_value 已进入 schema，这个坑随根因一起消失了——说明那次的错不是模型不稳，是我们没把列给它。
 
 **3. 销量最高的前 5 个品类有哪些？**　`考 TopN 语义；易错点是拿 DWS 明细自己排而不是用 ADS 现成结果`
 
 ```sql
-SELECT rank_no, category, gmv, item_qty FROM ydsh_ads.ads_category_top10 WHERE rank_no <= 5 ORDER BY rank_no
+SELECT rank_no, category, gmv FROM ydsh_ads.ads_category_top10 WHERE rank_no <= 5 ORDER BY rank_no
 ```
-结果 5 行，与参考 SQL：宽松一致（模型多返回 5 个数值，列选多了）；重试 0 次
+结果 5 行，与参考 SQL：一致；重试 0 次
 
-人工复核：**部分正确** — 返回 rank_no、category、gmv、item_qty，但排序直接沿用 rank_no。而 rank_no 在 ETL 里是 ROW_NUMBER() OVER (ORDER BY gmv DESC)，按 GMV 排的。题目问「销量最高」，它给的是「GMV 前 5 名及其件数」。题目本身有歧义（销量指 GMV 还是件数），但模型既没按件数重排也没澄清歧义，属于照搬现成排名。
+人工复核：**部分正确** — 返回 rank_no、category、gmv，按 rank_no 取前 5，结果本身正确（GMV 前 5 名）。但 rank_no 在 ETL 里是 ROW_NUMBER() OVER (ORDER BY gmv DESC)，即按 GMV 排名；题目写的是「销量最高」，若「销量」指件数，这道题的答案应当是另一组品类。模型既没按件数重排，也没澄清歧义，属于照搬现成排名。判据判「一致」是因为它和参考 SQL 写法相同，参考 SQL 本身也带这个歧义。
 
 **4. 各渠道的 GMV 占比是多少？**　`考占比字段；易错点是自己算分母导致与 ADS 口径不符`
 
@@ -56,25 +56,25 @@ SELECT channel, gmv, gmv_share FROM ydsh_ads.ads_channel_contribution ORDER BY g
 ```
 结果 4 行，与参考 SQL：宽松一致（模型多返回 4 个数值，列选多了）；重试 0 次
 
-人工复核：**正确** — 返回 channel、gmv、gmv_share 三列，比只给占比更有用。严格判据判「不一致」只因多带了一列 gmv，不是算错——这正是补宽松判据的原因。占比合计与 ADS 层一致。
+人工复核：**正确** — SELECT channel, gmv, gmv_share ... ORDER BY gmv DESC，四渠道占比 0.2520 / 0.2499 / 0.2492 / 0.2488，合计 0.9999（四舍五入残差），与 ADS 层一致。严格判据判「不一致」只因它多带了 gmv 一列（4 行 × 2 列 = 8 个数值 vs 参考 4 个），不是算错。上一轮同一道题它选了 order_cnt、user_cnt，压根没碰占比——原因是 gmv_share 是 decimal(10,4)，被 schema 抽取吃掉了，模型眼前没有这一列。
 
 **5. 复购率是多少？**　`考指标别名；易错点是编一个自己没有的指标口径`
 
 ```sql
-SELECT ROUND(SUM(CASE WHEN order_cnt > 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) AS repurchase_rate FROM ydsh_dws.dws_user_order_agg
+SELECT metric_name, metric_value, unit, definition FROM ydsh_ads.ads_kpi_summary WHERE metric_key = 'repeat_rate'
 ```
 结果 1 行，与参考 SQL：一致；重试 0 次
 
-人工复核：**正确** — 自己写了 SUM(CASE WHEN order_cnt > 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) 去 dws_user_order_agg 算，口径与 KPI 表的 repeat_rate（复购用户数/去重用户数）一致，实测 1000 用户全部 order_cnt>1，结果 100% 正确。但它绕开了已定义好的 KPI 表，等于把指标口径复制了一份到 SQL 里——KPI 定义一变，这条 SQL 会静默给出旧口径。上一轮它写的是 WHERE metric_name='复购率' OR metric_key='repurchase_rate'（后者根本不存在，靠中文名兜住）。
+人工复核：**正确** — metric_key = 'repeat_rate' 直查 KPI 表得 100.0000%。数值本身没问题，但要在报告里说清：本数据集 1000 个用户全部 order_cnt > 1，所以复购率必然是 100%，这是数据特征不是算错。上一轮它绕开 KPI 表自己写 SUM(CASE WHEN order_cnt > 1 ...) 去算，口径虽一致但等于把定义复制进 SQL，KPI 定义一改就会静默失真。
 
 **6. 广东省全年销售额是多少？**　`考维度过滤；易错点是写成 = '广东' 而非 LIKE，或漏掉省字`
 
 ```sql
-SELECT ROUND(SUM(gmv), 2) AS gmv FROM ydsh_dws.dws_sales_store_day WHERE province = '广东' AND stat_date BETWEEN '2024-01-01' AND '2024-12-31'
+SELECT ROUND(SUM(gmv), 2) AS gmv FROM ydsh_dws.dws_sales_store_day WHERE province = '广东省'
 ```
-结果 1 行，与参考 SQL：缺值：参考中的 472,606.11 在模型结果里找不到（模型 0 值 / 参考 1 值）；重试 0 次
+结果 1 行，与参考 SQL：一致；重试 0 次
 
-人工复核：**错误** — 写成 province = '广东'，而维度表实际取值是「广东省」，等值匹配 0 行，SUM 返回 NULL。正是本题 probe 预判的坑，也是 NL2SQL 最典型的一类错误：把「用户怎么说」当成「字段里怎么存」。正确写法是 LIKE '%广东%'。执行成功、无报错，只能靠人看出来。
+人工复核：**正确** — 写成 province = '广东省'，命中 472,606.11，与参考的 LIKE '%广东%' 结果完全相同。这是维度值注入改造的直接效果：改造前它写的是 = '广东'，等值匹配 0 行、SUM 返回 NULL，执行成功、无报错，只能靠人看出来。
 
 **7. 最近 7 天每天的下单量**　`考时间序列 + 排序 + 限行三件事同时成立；这是规则兜底最容易翻车的题`
 
@@ -83,7 +83,7 @@ SELECT stat_date, order_cnt FROM (SELECT stat_date, order_cnt FROM ydsh_dws.dws_
 ```
 结果 7 行，与参考 SQL：一致；重试 0 次
 
-人工复核：**正确** — 子查询先 ORDER BY stat_date DESC LIMIT 7 取最近 7 天，外层再按时间正序输出，比参考 SQL 直接倒序更贴合阅读习惯。
+人工复核：**正确** — 子查询先 ORDER BY stat_date DESC LIMIT 7 取最近 7 天，外层再按时间正序输出，12-25 至 12-31 共 7 行，与参考一致且更贴合阅读顺序。
 
 **8. 2024 年 11 月 6 日的 GMV 是多少？**　`考日期字面量格式；易错点是写成 2024/11/06 导致查出 0 行`
 
@@ -93,16 +93,3 @@ SELECT ROUND(SUM(gmv), 2) AS gmv FROM ydsh_dws.dws_sales_day WHERE stat_date = '
 结果 1 行，与参考 SQL：一致；重试 0 次
 
 人工复核：**正确** — 日期字面量写成 '2024-11-06'，格式正确，命中 1 行，结果 37,739.92 与 DWS 一致，没踩 2024/11/06 查出 0 行的坑。
-
-## AI 洞察调用
-
-- 案例：2024-11-06，端到端耗时 32.7s（含 Hive 查询）
-- 完整输出见 `python/outputs/ai_insight.md`
-
-```
-读入 366 天日粒度数据
-指定日期：2024-11-06（相对 7 日均线偏离 -47.1%，稳健 z=-1.97）
-调用大模型：deepseek-flash
-已输出 C:\Users\Lenovo\Desktop\ydsh-dw\python\outputs\ai_insight.md
-归因来源：大模型 deepseek-flash
-```
