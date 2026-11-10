@@ -237,7 +237,8 @@ def ask(question: str, offline: bool = False, explain: bool = False,
                     r = llm_client.chat(messages, temperature=0)
                 sql = clean_sql(r["content"])
                 trace["attempts"].append({"sql": sql, "elapsed": r["elapsed"],
-                                          "tokens": r["prompt_tokens"]})
+                                          "tokens": r["prompt_tokens"],
+                                          "model": r.get("model")})
                 validate_sql(sql, ALLOWED_TABLES)
                 rows = run_sql(sql)
                 return {"ok": True, "sql": sql, "rows": rows, "trace": trace}
