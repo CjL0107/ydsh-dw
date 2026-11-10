@@ -1,7 +1,7 @@
 # 第 3 周 · Fork / Pull Request / Code Review 网页端操作步骤
 
 > 前提：本地已完成分支开发并推送。仓库：`github.com/CjL0107/ydsh-dw`
-> 已推送分支：`feature/nl2sql-dim-values`（HEAD `7f8581e`，领先 `main` 8 个提交 / 16 个文件）
+> 已推送分支：`feature/nl2sql-dim-values`（领先 `main` 若干提交，具体数字以页面为准；本地用 `git log --oneline origin/main..HEAD` 核对）
 > 本文按"点哪里、填什么、看到什么"的顺序写，照着点即可。
 
 ---
@@ -59,7 +59,7 @@ bash tools/push.sh origin feature/nl2sql-dim-values
    - 或 **「Pull requests」** → 绿色 **「New pull request」** → **base** 选 `main`，
      **compare** 选 `feature/nl2sql-dim-values`；
 2. 进入填写页，确认顶部显示 `base: main ← compare: feature/nl2sql-dim-values`（方向别反），
-   并且下方列出 **8 commits / 16 files changed**——看不到提交就回到第零节；
+   并且下方列出 **N commits / M files changed**（N、M 均大于 0）——看不到提交就回到第零节；
 3. 标题填：
 
    ```
@@ -126,7 +126,7 @@ bash tools/push.sh origin feature/nl2sql-dim-values
 
 1. 回到 **「Conversation」** 标签；
 2. 底部绿色 **「Merge pull request」** → 选 **「Create a merge commit」**
-   （保留合并节点，便于展示冲突解决过程；不要选 Squash，会把 8 个提交压成一个，
+   （保留合并节点，便于展示冲突解决过程；不要选 Squash，会把多个提交压成一个，
    提交规范钩子那条实践就看不见了）；
 3. 确认提交信息，点 **「Confirm merge」**；
 4. 合并后点 **「Delete branch」** 删掉远端分支（本地分支保留，作为记录）。

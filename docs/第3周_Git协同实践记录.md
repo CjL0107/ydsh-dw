@@ -251,8 +251,8 @@ $ git merge-base --is-ancestor 2e75afd main && echo "已并入 main"
 `2e75afd` 早已在 `main` 的历史里，分支与主干内容一致，GitHub 自然"没有东西可比较"。
 教训是：**建 PR 前先确认 `ahead_by > 0`**，看的是提交列表而不是页面按钮。
 
-后来改用确实有独有提交的 `feature/nl2sql-dim-values`（领先 `main` 8 个提交 / 16 个文件），
-API 核对 `compare` 返回 `status: ahead, ahead_by: 8`，PR 就可以正常创建了。
+后来改用确实有独有提交的 `feature/nl2sql-dim-values`（领先 `main` 多个独有提交），
+API 核对 `compare` 返回 `status: ahead`，`ahead_by` 大于 0，PR 就可以正常创建了。
 
 ### PR 描述（`feature/nl2sql-dim-values`，待网页端提交）
 
