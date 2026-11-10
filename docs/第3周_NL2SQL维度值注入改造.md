@@ -149,7 +149,7 @@ python python/validate_llm.py       # 整轮 8 题复测
 python python/validate_llm.py --reuse   # 只改人工复核、重渲染报表，不再花 token
 ```
 
-同一个时间点上，网络也出了问题，导致本分支**没能推到远端**：
+推送当时也确实卡住过，这里留一份记录，因为它和"容器 Up 不等于可用"是同一类经验——**环境报的绿灯不算数**：
 
 ```
 $ curl https://api.github.com/zen          # 通
@@ -164,12 +164,21 @@ fatal: unable to access '...': CONNECT tunnel failed, response 502
 
 `api.github.com` 能通、`github.com` 主域不通，代理对所有本地端口都返回 502，
 `ssh.github.com:443` 与 `github.com:22` 均不可达，也没有配置 SSH 密钥。
-所以分支和 4 个提交目前只在本地，PR 也建不起来。
 
-绕行的尝试也失败了，记在这里免得重复踩：写了个本地 CONNECT 转发器
-（`tools/local_connect_proxy.py`），把 `github.com:443` 直接打到 `20.205.243.166`，
-`curl --resolve` 能拿到 200，但 TCP 随后被重置，转发器报 `TimeoutError`。
-说明那个 IP 的"200"是残缺响应，链路层本来就不通，代码绕不过去。
+绕行尝试：写了个本地 CONNECT 转发器（`tools/local_connect_proxy.py`），
+把 `github.com:443` 直接打到 `20.205.243.166`，`curl --resolve` 能拿到 200，
+但 TCP 随后被重置，转发器报 `TimeoutError`。说明那个 IP 的"200"是残缺响应，
+链路层本来就不通，代码绕不过去——这一条留着免得以后再试一遍。
+
+最终是代理恢复后推上去的。`tools/push.sh` 会自动扫描本机监听端口、
+逐个做 git 握手探测，找到能用的那个再推，所以代理端口每次重启都变也不用手改：
+
+```
+==> 2/3 逐个探测能否穿透 GitHub
+    ✔ 127.0.0.1:21560  git 握手成功
+==> 3/3 使用 127.0.0.1:21560 推送 origin/feature/nl2sql-dim-values
+ * [new branch]      feature/nl2sql-dim-values -> feature/nl2sql-dim-values
+```
 
 ---
 
@@ -181,3 +190,57 @@ fatal: unable to access '...': CONNECT tunnel failed, response 502
 
 所以维度注入的清单从 6 个扩到 8 个（加 `metric_key`、`metric_name`）。
 教训是：**"维度列"不等于"业务维度"**，凡是用来做等值过滤的字符串列，都在这个范围内。
+
+---
+
+## 七、没预料到的主线：Schema 少了 42 列
+
+维度注入做完、整轮复测跑通之后，还有两题不对：客单价漏查 `metric_value`、
+渠道占比选了 `order_cnt` 而不是 `gmv_share`。我一开始仍按"模型不稳"解释，
+直到收尾时顺手核了一下 `ads_channel_contribution` 的列：
+
+```sql
+-- Hive 里 7 列
+describe ydsh_ads.ads_channel_contribution;
+-- channel, channel_code, gmv, gmv_share, order_cnt, user_cnt, aov
+
+-- 抽取脚本只认得 4 列
+抽取 ydsh_ads.ads_channel_contribution: 4 个字段
+```
+
+缺的正好是 `gmv`、`gmv_share`、`aov`——三个 decimal 列。继续查：
+
+Hive 的 `DESCRIBE` 输出的类型名是 `decimal(16,2)`，**自带一个逗号**。
+`describe()` 用的是 `--outputformat=csv2`，`csv.reader` 把
+`gmv,decimal(16,2),GMV` 切成 **4** 段，而表头只有 **3** 列，长度不等 → 计入 `bad` → `continue` 丢弃。
+
+静默是最要命的部分：
+
+- 原兜底只在「**一行都**对不齐」时抛异常，丢一部分完全无声；
+- 脚本打印的 `4 个字段` 太正常了，没人会去数一个 7 列的表为什么只抽到 4 列；
+- 于是 `schema.json` 从 112 列缩到 70 列，14 张表里所有 decimal 指标列全部没进 Prompt。
+
+丢的列清点下来是 42 个：`gmv`、`gmv_share`、`aov`、`discount_amount`、`cancel_rate`、
+`mom_rate`、`gmv_dod`、`gmv_ma7`、`metric_value`、`avg_unit_price`、`total_gmv`、`user_share`……
+**一张表都没躲过。**
+
+摆在一起看就很荒谬：整个项目天天在算 GMV，而模型从头到尾没在 schema 里见过 `gmv` 这一列。
+它"漏查 `metric_value`"、"选了 `order_cnt` 而不是 `gmv_share`"，不是判断失误，是眼前只有这几个字段可选。
+
+修复两处：
+
+1. `describe()` 改用 `--outputformat=tsv2`（Tab 分隔），类型名里的逗号不再被当分隔符；
+2. `run_sql()` 在"部分行对不齐"时向 stderr 告警，这类丢失必须先叫出来，哪怕不中断执行。
+
+修完字段数 70 → 112，同一模型同一题集人工判定 5/8 → 7/8。
+
+这件事和第四节暴露的"假 8/8"是同一个病根：**静默返回不完整的结果，比直接报错危险得多。**
+报错会被看见，少一半列的 schema 会被当成正常继续用。
+所以下一个该补的护栏是「Schema 完整性自检」——抽取完成后校验
+「每张表抽到的列数 == `SHOW COLUMNS` 的真实列数」，不一致就报错。
+它防的不是模型，是防自己骗自己。
+
+还有一层更该记住的：这次涨分**不能当成功故事讲**。
+如果只看 5/8 → 7/8，很容易归因为"多跑几次模型就稳了"；
+真相是上一版的坏成绩由我自己制造的坏输入测出来，不该记在模型账上。
+**分数变好和事情变对，不是同一件事。**
