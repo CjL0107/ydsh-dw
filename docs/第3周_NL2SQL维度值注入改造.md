@@ -140,6 +140,28 @@ python python/nl2sql_schema.py      # 重抽 schema + 维度取值
 python python/validate_llm.py       # 整轮 8 题复测
 ```
 
+同一个时间点上，网络也出了问题，导致本分支**没能推到远端**：
+
+```
+$ curl https://api.github.com/zen          # 通
+200
+
+$ curl https://github.com/                 # 不通
+000
+
+$ git push origin feature/nl2sql-dim-values
+fatal: unable to access '...': CONNECT tunnel failed, response 502
+```
+
+`api.github.com` 能通、`github.com` 主域不通，代理对所有本地端口都返回 502，
+`ssh.github.com:443` 与 `github.com:22` 均不可达，也没有配置 SSH 密钥。
+所以分支和 4 个提交目前只在本地，PR 也建不起来。
+
+绕行的尝试也失败了，记在这里免得重复踩：写了个本地 CONNECT 转发器
+（`tools/local_connect_proxy.py`），把 `github.com:443` 直接打到 `20.205.243.166`，
+`curl --resolve` 能拿到 200，但 TCP 随后被重置，转发器报 `TimeoutError`。
+说明那个 IP 的"200"是残缺响应，链路层本来就不通，代码绕不过去。
+
 ---
 
 ## 六、顺带发现：`客单价` 暴露的是同一类问题
