@@ -115,7 +115,19 @@ def same_result(a: list[dict], b: list[dict], rel: float = 0.01, abs_: float = 0
     if len(a) != len(b):
         return {"strict": False, "loose": False,
                 "note": f"行数不同：模型 {len(a)} 行 / 参考 {len(b)} 行"}
+    # 两边都空时不能判"一致"：0 个数值和 0 个数值天然相等，
+    # 会把「查询失败/容器不可用」误判成「完全正确」。实测靠这个漏洞造出过假的 8/8。
+    if not a and not b:
+        return {"strict": False, "loose": False,
+                "note": "两边均返回 0 行，无法判定（排查查询条件或执行环境）"}
     na, nb = sorted(numerics(a)), sorted(numerics(b))
+    if not na and not nb:
+        # 有行但全是字符串列，改用字符串集合比对，避免空集对空集又判成一致
+        sa = sorted(str(v) for r in a for v in r.values())
+        sb = sorted(str(v) for r in b for v in r.values())
+        same = sa == sb
+        return {"strict": same, "loose": same,
+                "note": "无数值列，按字符串比对" + ("：一致" if same else "：不一致")}
 
     def close(x: float, y: float) -> bool:
         return abs(x - y) <= max(abs_, abs(y) * rel)
