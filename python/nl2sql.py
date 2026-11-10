@@ -34,6 +34,7 @@ from hive_runner import SqlRejected, run_sql, validate_sql
 
 ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_JSON = ROOT / "python" / "outputs" / "schema.json"
+DIM_JSON = ROOT / "python" / "outputs" / "dim_values.json"
 LOG_JSONL = ROOT / "python" / "outputs" / "nl2sql_log.jsonl"
 
 ALLOWED_TABLES = {
@@ -50,7 +51,7 @@ ALLOWED_TABLES = {
 FEW_SHOT = [
     {
         "q": "2024 年广东省的销售额是多少？",
-        "sql": "SELECT ROUND(SUM(gmv), 2) AS gmv FROM ydsh_dws.dws_sales_store_day WHERE province = '广东'",
+        "sql": "SELECT ROUND(SUM(gmv), 2) AS gmv FROM ydsh_dws.dws_sales_store_day WHERE province = '广东省'",
     },
     {
         "q": "销量最高的前 5 个品类是哪些？",
@@ -79,8 +80,12 @@ SYSTEM_PROMPT = """你是 Hive SQL 专家，负责把业务问题翻译成可执
 5. 时间字段是字符串 'yyyy-MM-dd'，按日期筛选用 BETWEEN 或 LIKE，不要用 date() 函数。
 6. 数据库里没有 2023 年数据，所有时间条件只能落在 2024 年。
 7. 只输出 SQL 本身，不要解释、不要 Markdown 代码块。
+8. 维度列做等值匹配时，必须逐字使用 {dims} 一节给出的原始取值。
+   例如库里存的是「广东省」，写 WHERE province = '广东' 会查出空结果。
 
 {examples}
+
+{dims}
 
 可用表结构如下：
 {schema}
@@ -106,9 +111,73 @@ def load_schema_text() -> str:
     return "\n".join(lines)
 
 
-def build_messages(question: str, schema_text: str) -> list[dict]:
+def load_dim_text() -> str:
+    """维度取值文本。没有 dim_values.json 时返回空串（降级为只有 Schema）。"""
+    if not DIM_JSON.exists():
+        print(f"[警告] 未找到 {DIM_JSON.name}，Prompt 不含维度取值，"
+              f"等值匹配易出错。请先运行 python python/nl2sql_schema.py")
+        return ""
+    data = json.loads(DIM_JSON.read_text(encoding="utf-8"))
+    lines = ["维度实际取值（WHERE 等值匹配必须逐字照抄，不要简化成简称）："]
+    for name, d in data["dims"].items():
+        vals = "、".join(f"'{v}'" for v in d["values"])
+        tail = f" 等共 {d['total']} 个" if d.get("truncated") else ""
+        lines.append(f"- {d['table']}.{d['column']}（{d['note']}）：{vals}{tail}")
+    return "\n".join(lines)
+
+
+def load_dim_map() -> dict[str, dict]:
+    """列名 -> 合法取值集合，供结果侧校验用。"""
+    if not DIM_JSON.exists():
+        return {}
+    data = json.loads(DIM_JSON.read_text(encoding="utf-8"))
+    return {d["column"]: d for d in data["dims"].values()}
+
+
+def check_dim_literals(sql: str) -> list[dict]:
+    """检查 SQL 里维度列的等值字面量是否真是库里的取值。
+
+    这是**结果侧**防线：生成侧 Prompt 已经注入了取值，但模型仍可能写简称
+    （实测把「广东省」写成「广东」）。这类错误执行不报错、只返回空结果，
+    比语法错误更难发现，所以必须在执行前拦一道。
+    LIKE 不检查——模糊匹配写「广东」能命中「广东省」，本来就没错。
+    """
+    dims = load_dim_map()
+    if not dims:
+        return []
+    issues = []
+    for col, d in dims.items():
+        valid = set(d["values"])
+        # col = 'v'  以及  col IN ('a','b')
+        for m in re.finditer(rf"\b{col}\b\s*=\s*'([^']*)'", sql, flags=re.I):
+            lit = m.group(1)
+            # 排除被 LIKE 包住的情况
+            if re.search(rf"\b{col}\b\s+like\b", sql[:m.end()], flags=re.I):
+                continue
+            if lit not in valid:
+                issues.append({"column": col, "literal": lit,
+                               "suggest": _closest(lit, valid), "op": "="})
+        for m in re.finditer(rf"\b{col}\b\s+in\s*\(([^)]*)\)", sql, flags=re.I):
+            for lit in re.findall(r"'([^']*)'", m.group(1)):
+                if lit not in valid:
+                    issues.append({"column": col, "literal": lit,
+                                   "suggest": _closest(lit, valid), "op": "IN"})
+    return issues
+
+
+def _closest(lit: str, valid: set[str]) -> str | None:
+    import difflib
+    hit = difflib.get_close_matches(lit, list(valid), n=1, cutoff=0.3)
+    return hit[0] if hit else None
+
+
+def build_messages(question: str, schema_text: str, dim_text: str = "") -> list[dict]:
     ex = "\n".join(f"问：{e['q']}\nSQL：{e['sql']}\n" for e in FEW_SHOT)
-    system = SYSTEM_PROMPT.format(examples="参考示例：\n" + ex, schema=schema_text)
+    system = SYSTEM_PROMPT.format(
+        examples="参考示例：\n" + ex,
+        dims=dim_text or "（本环境未配置维度取值表，等值匹配请用 LIKE 兜底）",
+        schema=schema_text,
+    )
     return [
         {"role": "system", "content": system},
         {"role": "user", "content": f"问题：{question}"},
@@ -221,8 +290,10 @@ def ask(question: str, offline: bool = False, explain: bool = False,
              "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "attempts": []}
 
     if use_llm:
-        messages = build_messages(question, schema_text)
+        dim_text = load_dim_text()
+        messages = build_messages(question, schema_text, dim_text)
         sql, err = None, None
+        dim_warn: list[dict] = []
         for attempt in range(3):
             try:
                 if attempt == 0:
@@ -240,8 +311,29 @@ def ask(question: str, offline: bool = False, explain: bool = False,
                                           "tokens": r["prompt_tokens"],
                                           "model": r.get("model")})
                 validate_sql(sql, ALLOWED_TABLES)
+
+                # 结果侧防线：等值匹配用了库里不存在的取值，执行虽成功但结果必为空
+                dim_warn = check_dim_literals(sql)
+                if dim_warn and attempt < 2:
+                    detail = "；".join(
+                        f"{w['column']} = '{w['literal']}' 不存在"
+                        + (f"，应为 '{w['suggest']}'" if w["suggest"] else "")
+                        for w in dim_warn
+                    )
+                    raise ValueError(
+                        f"维度取值错误：{detail}。"
+                        f"请改用维度取值表中列出的原始值，或改用 LIKE 模糊匹配。"
+                    )
+
                 rows = run_sql(sql)
-                return {"ok": True, "sql": sql, "rows": rows, "trace": trace}
+                out = {"ok": True, "sql": sql, "rows": rows, "trace": trace}
+                if dim_warn:
+                    out["dim_warning"] = dim_warn
+                    trace["dim_warning"] = dim_warn
+                    if verbose:
+                        print(f"  [取值告警] 仍有 {len(dim_warn)} 处维度取值可疑，"
+                              f"结果可能为空：{dim_warn}")
+                return out
             except (SqlRejected, RuntimeError, Exception) as e:  # noqa: BLE001
                 err = str(e)[:300]
                 trace["attempts"].append({"sql": sql, "error": err})

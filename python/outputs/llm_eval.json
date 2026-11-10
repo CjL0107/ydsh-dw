@@ -1,6 +1,6 @@
 {
   "meta": {
-    "ts": "2026-11-10 08:16:15",
+    "ts": "2026-11-10 09:38:09",
     "provider": "deepseek",
     "model": "deepseek-flash"
   },
@@ -8,7 +8,7 @@
     {
       "question": "2024 年全年 GMV 是多少？",
       "probe": "全表聚合，考表选择与聚合函数",
-      "sql": "SELECT ROUND(SUM(gmv), 2) AS gmv FROM ydsh_dws.dws_sales_day WHERE stat_date BETWEEN '2024-01-01' AND '2024-12-31'",
+      "sql": "SELECT metric_name, ROUND(metric_value, 2) AS metric_value, unit FROM ydsh_ads.ads_kpi_summary WHERE metric_key = 'gmv' AND stat_period = '2024 全年'",
       "ok": true,
       "error": null,
       "mode": "llm",
@@ -16,7 +16,9 @@
       "rows": 1,
       "result_rows": [
         {
-          "gmv": "27342828.20"
+          "metric_name": "GMV",
+          "metric_value": "27342828.20",
+          "unit": "元"
         }
       ],
       "ref_rows_data": [
@@ -24,8 +26,8 @@
           "gmv": "27342828.20"
         }
       ],
-      "prompt_tokens": 1513,
-      "elapsed": 1.85,
+      "prompt_tokens": 3708,
+      "elapsed": 1.3,
       "model": "deepseek-flash",
       "ref_rows": 1,
       "strict": true,
@@ -35,7 +37,7 @@
     {
       "question": "客单价是多少？",
       "probe": "考 KPI 宽表的 metric_key 过滤；易错点是自己去算 SUM/COUNT 导致口径不一致",
-      "sql": "SELECT metric_key, metric_name, unit, definition FROM ydsh_ads.ads_kpi_summary WHERE metric_name LIKE '%客单价%'",
+      "sql": "SELECT metric_name, metric_value, unit FROM ydsh_ads.ads_kpi_summary WHERE metric_key = 'aov'",
       "ok": true,
       "error": null,
       "mode": "llm",
@@ -43,10 +45,9 @@
       "rows": 1,
       "result_rows": [
         {
-          "metric_key": "aov",
           "metric_name": "客单价 AOV",
-          "unit": "元/单",
-          "definition": "GMV ÷ 有效订单量"
+          "metric_value": "2529.6400",
+          "unit": "元/单"
         }
       ],
       "ref_rows_data": [
@@ -54,18 +55,18 @@
           "aov": "2529.6400"
         }
       ],
-      "prompt_tokens": 1507,
-      "elapsed": 2.35,
+      "prompt_tokens": 3702,
+      "elapsed": 1.42,
       "model": "deepseek-flash",
       "ref_rows": 1,
-      "strict": false,
-      "loose": false,
-      "match_note": "缺值：参考中的 2,529.64 在模型结果里找不到（模型 0 值 / 参考 1 值）"
+      "strict": true,
+      "loose": true,
+      "match_note": "一致"
     },
     {
       "question": "销量最高的前 5 个品类有哪些？",
       "probe": "考 TopN 语义；易错点是拿 DWS 明细自己排而不是用 ADS 现成结果",
-      "sql": "SELECT rank_no, category, gmv, item_qty FROM ydsh_ads.ads_category_top10 WHERE rank_no <= 5 ORDER BY rank_no",
+      "sql": "SELECT rank_no, category, gmv FROM ydsh_ads.ads_category_top10 WHERE rank_no <= 5 ORDER BY rank_no",
       "ok": true,
       "error": null,
       "mode": "llm",
@@ -75,32 +76,27 @@
         {
           "rank_no": "1",
           "category": "运动户外",
-          "gmv": "4064272.90",
-          "item_qty": "12009"
+          "gmv": "4064272.90"
         },
         {
           "rank_no": "2",
           "category": "数码家电",
-          "gmv": "3762816.86",
-          "item_qty": "11222"
+          "gmv": "3762816.86"
         },
         {
           "rank_no": "3",
           "category": "图书文娱",
-          "gmv": "3424791.87",
-          "item_qty": "10099"
+          "gmv": "3424791.87"
         },
         {
           "rank_no": "4",
           "category": "服饰鞋包",
-          "gmv": "3423260.99",
-          "item_qty": "9925"
+          "gmv": "3423260.99"
         },
         {
           "rank_no": "5",
           "category": "食品生鲜",
-          "gmv": "3356481.72",
-          "item_qty": "9814"
+          "gmv": "3356481.72"
         }
       ],
       "ref_rows_data": [
@@ -130,13 +126,13 @@
           "gmv": "3356481.72"
         }
       ],
-      "prompt_tokens": 1513,
-      "elapsed": 1.43,
+      "prompt_tokens": 3708,
+      "elapsed": 2.42,
       "model": "deepseek-flash",
       "ref_rows": 5,
-      "strict": false,
+      "strict": true,
       "loose": true,
-      "match_note": "宽松一致（模型多返回 5 个数值，列选多了）"
+      "match_note": "一致"
     },
     {
       "question": "各渠道的 GMV 占比是多少？",
@@ -187,8 +183,8 @@
           "gmv_share": "0.2488"
         }
       ],
-      "prompt_tokens": 1512,
-      "elapsed": 1.08,
+      "prompt_tokens": 3707,
+      "elapsed": 0.88,
       "model": "deepseek-flash",
       "ref_rows": 4,
       "strict": false,
@@ -198,7 +194,7 @@
     {
       "question": "复购率是多少？",
       "probe": "考指标别名；易错点是编一个自己没有的指标口径",
-      "sql": "SELECT ROUND(SUM(CASE WHEN order_cnt > 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) AS repurchase_rate FROM ydsh_dws.dws_user_order_agg",
+      "sql": "SELECT metric_name, metric_value, unit, definition FROM ydsh_ads.ads_kpi_summary WHERE metric_key = 'repeat_rate'",
       "ok": true,
       "error": null,
       "mode": "llm",
@@ -206,7 +202,10 @@
       "rows": 1,
       "result_rows": [
         {
-          "repurchase_rate": "100.00"
+          "metric_name": "复购率",
+          "metric_value": "100.0000",
+          "unit": "%",
+          "definition": "复购用户数 ÷ 下单用户数"
         }
       ],
       "ref_rows_data": [
@@ -214,8 +213,8 @@
           "repeat_rate": "100.0000"
         }
       ],
-      "prompt_tokens": 1508,
-      "elapsed": 3.93,
+      "prompt_tokens": 3703,
+      "elapsed": 1.03,
       "model": "deepseek-flash",
       "ref_rows": 1,
       "strict": true,
@@ -225,7 +224,7 @@
     {
       "question": "广东省全年销售额是多少？",
       "probe": "考维度过滤；易错点是写成 = '广东' 而非 LIKE，或漏掉省字",
-      "sql": "SELECT ROUND(SUM(gmv), 2) AS gmv FROM ydsh_dws.dws_sales_store_day WHERE province = '广东' AND stat_date BETWEEN '2024-01-01' AND '2024-12-31'",
+      "sql": "SELECT ROUND(SUM(gmv), 2) AS gmv FROM ydsh_dws.dws_sales_store_day WHERE province = '广东省'",
       "ok": true,
       "error": null,
       "mode": "llm",
@@ -233,7 +232,7 @@
       "rows": 1,
       "result_rows": [
         {
-          "gmv": "NULL"
+          "gmv": "472606.11"
         }
       ],
       "ref_rows_data": [
@@ -241,13 +240,13 @@
           "gmv": "472606.11"
         }
       ],
-      "prompt_tokens": 1508,
-      "elapsed": 1.4,
+      "prompt_tokens": 3703,
+      "elapsed": 1.18,
       "model": "deepseek-flash",
       "ref_rows": 1,
-      "strict": false,
-      "loose": false,
-      "match_note": "缺值：参考中的 472,606.11 在模型结果里找不到（模型 0 值 / 参考 1 值）"
+      "strict": true,
+      "loose": true,
+      "match_note": "一致"
     },
     {
       "question": "最近 7 天每天的下单量",
@@ -318,8 +317,8 @@
           "order_cnt": "40"
         }
       ],
-      "prompt_tokens": 1512,
-      "elapsed": 2.53,
+      "prompt_tokens": 3707,
+      "elapsed": 2.88,
       "model": "deepseek-flash",
       "ref_rows": 7,
       "strict": true,
@@ -345,8 +344,8 @@
           "gmv": "37739.92"
         }
       ],
-      "prompt_tokens": 1520,
-      "elapsed": 1.45,
+      "prompt_tokens": 3715,
+      "elapsed": 1.02,
       "model": "deepseek-flash",
       "ref_rows": 1,
       "strict": true,
@@ -354,9 +353,5 @@
       "match_note": "一致"
     }
   ],
-  "insight": {
-    "case": "2024-11-06",
-    "log_tail": "读入 366 天日粒度数据\n指定日期：2024-11-06（相对 7 日均线偏离 -47.1%，稳健 z=-1.97）\n调用大模型：deepseek-flash\n已输出 C:\\Users\\Lenovo\\Desktop\\ydsh-dw\\python\\outputs\\ai_insight.md\n归因来源：大模型 deepseek-flash\n",
-    "wall_sec": 32.7
-  }
+  "insight": null
 }

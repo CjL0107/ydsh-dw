@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-09 09:29:16",
+  "generated_at": "2026-11-10 09:35:25",
   "databases": {
     "ydsh_dws": {
       "dws_sales_category_day": {
@@ -24,6 +24,16 @@
             "name": "item_qty",
             "type": "int",
             "comment": "销售件数"
+          },
+          {
+            "name": "item_amount",
+            "type": "decimal(16,2)",
+            "comment": "明细标价金额（未分摊）"
+          },
+          {
+            "name": "gmv_alloc",
+            "type": "decimal(16,2)",
+            "comment": "按明细占比分摊后的 GMV"
           }
         ]
       },
@@ -54,6 +64,16 @@
             "name": "user_cnt",
             "type": "int",
             "comment": "有效订单用户数"
+          },
+          {
+            "name": "gmv",
+            "type": "decimal(16,2)",
+            "comment": "GMV"
+          },
+          {
+            "name": "aov",
+            "type": "decimal(14,2)",
+            "comment": "客单价"
           }
         ]
       },
@@ -96,9 +116,29 @@
             "comment": "有效订单用户数（去重）"
           },
           {
+            "name": "gmv",
+            "type": "decimal(16,2)",
+            "comment": "GMV=有效订单实付金额之和"
+          },
+          {
+            "name": "discount_amount",
+            "type": "decimal(16,2)",
+            "comment": "优惠金额合计（有效订单）"
+          },
+          {
             "name": "item_qty",
             "type": "int",
             "comment": "销售件数（有效订单对应明细）"
+          },
+          {
+            "name": "aov",
+            "type": "decimal(14,2)",
+            "comment": "客单价=GMV/有效订单量"
+          },
+          {
+            "name": "cancel_rate",
+            "type": "decimal(8,4)",
+            "comment": "取消率=取消订单/下单量"
           }
         ]
       },
@@ -119,6 +159,21 @@
             "name": "paid_user_cnt",
             "type": "int",
             "comment": "有效订单用户数"
+          },
+          {
+            "name": "gmv",
+            "type": "decimal(16,2)",
+            "comment": "GMV"
+          },
+          {
+            "name": "aov",
+            "type": "decimal(14,2)",
+            "comment": "客单价"
+          },
+          {
+            "name": "mom_rate",
+            "type": "decimal(10,4)",
+            "comment": "环比增长率（本月 vs 上月）"
           }
         ]
       },
@@ -164,6 +219,16 @@
             "name": "user_cnt",
             "type": "int",
             "comment": "有效订单用户数"
+          },
+          {
+            "name": "gmv",
+            "type": "decimal(16,2)",
+            "comment": "GMV"
+          },
+          {
+            "name": "aov",
+            "type": "decimal(14,2)",
+            "comment": "客单价"
           }
         ]
       },
@@ -194,6 +259,16 @@
             "name": "paid_user_cnt",
             "type": "int",
             "comment": "有效订单用户数"
+          },
+          {
+            "name": "gmv",
+            "type": "decimal(16,2)",
+            "comment": "GMV"
+          },
+          {
+            "name": "aov",
+            "type": "decimal(14,2)",
+            "comment": "客单价"
           }
         ]
       },
@@ -219,6 +294,16 @@
             "name": "order_cnt",
             "type": "int",
             "comment": "有效订单数"
+          },
+          {
+            "name": "total_gmv",
+            "type": "decimal(16,2)",
+            "comment": "累计 GMV"
+          },
+          {
+            "name": "avg_order_gmv",
+            "type": "decimal(14,2)",
+            "comment": "笔单价"
           },
           {
             "name": "active_days",
@@ -258,6 +343,16 @@
             "comment": "品类"
           },
           {
+            "name": "gmv",
+            "type": "decimal(16,2)",
+            "comment": "分摊后 GMV"
+          },
+          {
+            "name": "gmv_share",
+            "type": "decimal(10,4)",
+            "comment": "GMV 占比"
+          },
+          {
             "name": "order_cnt",
             "type": "int",
             "comment": "订单数"
@@ -266,6 +361,11 @@
             "name": "item_qty",
             "type": "int",
             "comment": "销售件数"
+          },
+          {
+            "name": "avg_unit_price",
+            "type": "decimal(14,2)",
+            "comment": "件单价"
           }
         ]
       },
@@ -283,6 +383,16 @@
             "comment": "渠道编码"
           },
           {
+            "name": "gmv",
+            "type": "decimal(16,2)",
+            "comment": "GMV"
+          },
+          {
+            "name": "gmv_share",
+            "type": "decimal(10,4)",
+            "comment": "GMV 占比"
+          },
+          {
             "name": "order_cnt",
             "type": "int",
             "comment": "订单数"
@@ -291,6 +401,11 @@
             "name": "user_cnt",
             "type": "int",
             "comment": "用户数"
+          },
+          {
+            "name": "aov",
+            "type": "decimal(14,2)",
+            "comment": "客单价"
           }
         ]
       },
@@ -306,6 +421,11 @@
             "name": "metric_name",
             "type": "string",
             "comment": "指标中文名"
+          },
+          {
+            "name": "metric_value",
+            "type": "decimal(18,4)",
+            "comment": "指标值"
           },
           {
             "name": "unit",
@@ -338,6 +458,16 @@
             "comment": "省份"
           },
           {
+            "name": "gmv",
+            "type": "decimal(16,2)",
+            "comment": "GMV"
+          },
+          {
+            "name": "gmv_share",
+            "type": "decimal(10,4)",
+            "comment": "GMV 占比"
+          },
+          {
             "name": "order_cnt",
             "type": "int",
             "comment": "订单数"
@@ -346,6 +476,11 @@
             "name": "user_cnt",
             "type": "int",
             "comment": "用户数"
+          },
+          {
+            "name": "aov",
+            "type": "decimal(14,2)",
+            "comment": "客单价"
           }
         ]
       },
@@ -368,9 +503,39 @@
             "comment": "是否周末"
           },
           {
+            "name": "gmv",
+            "type": "decimal(16,2)",
+            "comment": "GMV"
+          },
+          {
             "name": "paid_order_cnt",
             "type": "int",
             "comment": "有效订单量"
+          },
+          {
+            "name": "aov",
+            "type": "decimal(14,2)",
+            "comment": "客单价"
+          },
+          {
+            "name": "gmv_dod",
+            "type": "decimal(10,4)",
+            "comment": "GMV 日环比"
+          },
+          {
+            "name": "gmv_ma7",
+            "type": "decimal(16,2)",
+            "comment": "GMV 7 日移动平均"
+          },
+          {
+            "name": "gmv_last_week_same_day",
+            "type": "decimal(16,2)",
+            "comment": "上周同星期 GMV"
+          },
+          {
+            "name": "gmv_wow_same_day",
+            "type": "decimal(10,4)",
+            "comment": "周同比（vs 上周同星期）"
           }
         ]
       },
@@ -403,9 +568,24 @@
             "comment": "门店分级"
           },
           {
+            "name": "gmv",
+            "type": "decimal(16,2)",
+            "comment": "GMV"
+          },
+          {
+            "name": "gmv_share",
+            "type": "decimal(10,4)",
+            "comment": "GMV 占比"
+          },
+          {
             "name": "order_cnt",
             "type": "int",
             "comment": "订单数"
+          },
+          {
+            "name": "aov",
+            "type": "decimal(14,2)",
+            "comment": "客单价"
           }
         ]
       },
@@ -421,6 +601,36 @@
             "name": "user_cnt",
             "type": "int",
             "comment": "用户数"
+          },
+          {
+            "name": "user_share",
+            "type": "decimal(10,4)",
+            "comment": "用户占比"
+          },
+          {
+            "name": "gmv",
+            "type": "decimal(16,2)",
+            "comment": "GMV 合计"
+          },
+          {
+            "name": "gmv_share",
+            "type": "decimal(10,4)",
+            "comment": "GMV 占比"
+          },
+          {
+            "name": "avg_gmv",
+            "type": "decimal(14,2)",
+            "comment": "人均消费"
+          },
+          {
+            "name": "avg_freq",
+            "type": "decimal(10,2)",
+            "comment": "人均订单数"
+          },
+          {
+            "name": "avg_recency",
+            "type": "decimal(10,1)",
+            "comment": "平均最近购买间隔（天）"
           }
         ]
       }
