@@ -86,25 +86,47 @@ def run_sql(sql: str, timeout: int = 600, max_rows: int | None = None) -> list[d
         encoding="utf-8", errors="replace", timeout=timeout,
     )
     out = proc.stdout or ""
+    err = proc.stderr or ""
+
+    # 容器不可用时 docker exec 会把错误写到 stderr、stdout 为空。
+    # 若不在这里拦住，run_sql 会返回 []，调用方会把"查不到数据"当成"结果为空"，
+    # 两个空结果一比对就成了"一致"——验证脚本会给出完全错误的满分。
+    if proc.returncode != 0:
+        raise RuntimeError(f"beeline 执行失败（rc={proc.returncode}）：{(err or out).strip()[:300]}")
+    if "Error response from daemon" in err or "is not running" in err:
+        raise RuntimeError(f"容器不可用：{err.strip()[:300]}")
+
     if "Error while compiling" in out or "FAILED:" in out or "ParseException" in out:
         raise RuntimeError(_extract_error(out))
 
     lines = [ln for ln in out.splitlines() if ln.strip()]
-    lines = [ln for ln in lines if not ln.startswith(("SLF4J", "log4j", "[WARN]", "No such file"))]
+    lines = [ln for ln in lines
+             if not ln.startswith(("SLF4J", "log4j", "[WARN]", "No such file",
+                                   "INFO", "WARN", "Beeline", "Closing",
+                                   "Connected to", "Transaction isolation",
+                                   "Hive Session ID", "Cannot connect"))]
     if not lines:
         return []
 
     header = next(csv.reader([lines[0]]))
     rows: list[dict[str, Any]] = []
+    bad = 0
     for ln in lines[1:]:
         try:
             vals = next(csv.reader([ln]))
         except Exception:
+            bad += 1
             continue
         if len(vals) == len(header):
             rows.append(dict(zip(header, vals)))
+        else:
+            bad += 1
         if len(rows) >= limit_rows:
             break
+    # 有数据行却一行都对齐不上，说明表头取错了（多半是日志行混进了首行）。
+    # 这种情况必须报错，否则会静默返回空结果，被当成"真没数据"。
+    if not rows and bad:
+        raise RuntimeError(f"结果解析失败：{bad} 行无法与表头对齐，疑似日志混入。表头={header[:6]}")
     return rows
 
 
