@@ -1,0 +1,24 @@
+# 应用镜像依赖（app 与 streamlit 两个容器共用一个镜像）
+#
+# 关于 Hive 客户端的三个包，一个都不能少：
+#   pyhive     —— Thrift 客户端本体
+#   thrift     —— 传输层，pyhive 的硬依赖
+#   thrift-sasl + pure-sasl
+#               —— 本项目 HiveServer2 的认证方式是 NONE，pyhive 在 NONE 模式下
+#                  仍然要建 SASL/PLAIN 通道，缺 thrift_sasl 会直接
+#                  ModuleNotFoundError: No module named 'thrift_sasl'。
+#                  用 pure-sasl 而不是 sasl，是因为 sasl 要编译 C 扩展，
+#                  slim 镜像里还得装 gcc，纯 Python 实现省掉一层。
+flask==3.1.3
+streamlit==1.67.0
+requests==2.34.2
+pymysql==1.1.1
+python-dotenv==1.1.1
+# NL2SQL 走 OpenAI 兼容协议（DeepSeek 的 base_url 换掉即可）。
+# 宿主机上早就装过，镜像里漏了 —— 表现为提问后报 "No module named 'openai'"，
+# 而且只在容器里复现，本地跑得好好的那种坑。
+openai==3.46.0
+pyhive==0.7.0
+thrift==0.16.0
+thrift-sasl==0.4.3
+pure-sasl==0.6.2
