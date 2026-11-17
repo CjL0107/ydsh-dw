@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import csv
 import io
+import os
 import re
 import subprocess
 import sys
@@ -71,6 +72,15 @@ def validate_sql(sql: str, allowed_tables: set[str] | None = None) -> str:
 
 def run_sql(sql: str, timeout: int = 600, max_rows: int | None = None,
             sep: str = "csv") -> list[dict[str, Any]]:
+    """执行 SQL。
+
+    两种后端，由环境变量 HIVE_BACKEND 决定：
+      · docker（默认）—— 宿主机上 `docker exec beeline`，开发期用，好处是能直接
+        复用容器里的 beeline，不用在本机装 Hive 客户端
+      · pyhive —— 走 Thrift 直连 hive-server:10000，容器内运行时用
+        （容器里没有 docker 命令，exec 那条路走不通）
+    两条路的返回值结构一致：list[dict]，值统一为字符串，避免下游类型判断分叉。
+    """
     """执行单条 SQL，返回 list[dict]（表头做 key）
 
     max_rows：默认走 MAX_ROWS 安全上限；批处理脚本（如全量日序列）可显式放宽，
@@ -83,6 +93,10 @@ def run_sql(sql: str, timeout: int = 600, max_rows: int | None = None,
     """
     limit_rows = max_rows or MAX_ROWS
     s = _normalize(sql)
+
+    if os.getenv("HIVE_BACKEND", "docker").lower() == "pyhive":
+        return _run_pyhive(s, timeout=timeout, max_rows=limit_rows)
+
     fmt = "tsv2" if sep == "tsv" else "csv2"
     delimiter = "\t" if sep == "tsv" else ","
     cmd = [
@@ -118,6 +132,15 @@ def run_sql(sql: str, timeout: int = 600, max_rows: int | None = None,
         return []
 
     header = next(csv.reader([lines[0]], delimiter=delimiter))
+    # beeline 对 `select *` 返回的是表名限定的列名：ads_store_top10.gmv。
+    # 直接拿它当 dict key，下游按裸列名取值就会全部取不到 —— 第 4 周把 ADS
+    # 同步到 MySQL 时，10 行数据全写成 NULL 就是这么来的（行数对、值全空，
+    # 比直接报错更难发现）。这里统一剥掉"表名."前缀，前缀不一致时不动。
+    if header and all("." in h for h in header):
+        prefixes = {h.rsplit(".", 1)[0] for h in header}
+        if len(prefixes) == 1:
+            header = [h.split(".", 1)[1] for h in header]
+
     rows: list[dict[str, Any]] = []
     bad = 0
     for ln in lines[1:]:
@@ -143,6 +166,34 @@ def run_sql(sql: str, timeout: int = 600, max_rows: int | None = None,
         print(f"[hive_runner] 警告：{bad} 行与表头（{len(header)} 列）不匹配已丢弃，"
               f"SQL={s[:80]}", file=sys.stderr)
     return rows
+
+
+def _run_pyhive(sql: str, timeout: int = 600, max_rows: int = MAX_ROWS) -> list[dict[str, Any]]:
+    """Thrift 直连 HiveServer2（容器内运行用）"""
+    try:
+        from pyhive import hive  # 延迟导入：宿主机开发时不需要装
+    except ImportError as e:  # pragma: no cover
+        raise RuntimeError("未安装 pyhive，容器镜像里需要 pip install pyhive thrift") from e
+
+    conn = hive.Connection(
+        host=os.getenv("HIVE_HOST", "hive-server"),
+        port=int(os.getenv("HIVE_PORT", "10000")),
+        username=os.getenv("HIVE_USER", "hive"),
+        database=os.getenv("HIVE_DATABASE", "default"),
+        auth=os.getenv("HIVE_AUTH", "NONE"),
+    )
+    try:
+        cur = conn.cursor()
+        cur.execute(sql)
+        cols = [d[0].split(".")[-1] for d in cur.description]
+        rows: list[dict[str, Any]] = []
+        for rec in cur:
+            rows.append({c: ("" if v is None else str(v)) for c, v in zip(cols, rec)})
+            if len(rows) >= max_rows:
+                break
+        return rows
+    finally:
+        conn.close()
 
 
 def _extract_error(out: str) -> str:
