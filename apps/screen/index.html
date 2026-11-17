@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>云购生活 · 经营分析数据大屏</title>
+<link rel="stylesheet" href="assets/screen.css">
+</head>
+<body>
+<!-- 1920×1080 设计稿，整体等比缩放；缩放容器与真实视口解耦，
+     窗口怎么拉伸都不会错位（详见 screen.js 的 fitScreen） -->
+<div id="viewport">
+  <div id="screen">
+
+    <header class="hd">
+      <div class="hd-left">
+        <span class="dot"></span>
+        <span class="hd-sub">YUNGOUSHENGHUO · DATA WAREHOUSE</span>
+      </div>
+      <h1>云购生活 · 经营分析大屏</h1>
+      <div class="hd-right">
+        <span id="clock" class="clock">--:--:--</span>
+        <span id="fresh" class="fresh">数据加载中…</span>
+      </div>
+    </header>
+
+    <section class="row kpi-row" id="kpiRow"><!-- KPI 卡片由 JS 渲染 --></section>
+
+    <section class="row row-2">
+      <div class="panel span-8">
+        <div class="panel-hd"><h2>全年销售趋势</h2><span class="hint">GMV / 7 日均线 / 有效订单</span></div>
+        <div class="chart" id="c-trend"></div>
+      </div>
+      <div class="panel span-4">
+        <div class="panel-hd"><h2>省份销售分布</h2><span class="hint">TOP10 省份</span></div>
+        <div class="chart" id="c-map"></div>
+        <div class="map-note">底图：阿里云 DataV.GeoAtlas　含南海诸岛</div>
+      </div>
+    </section>
+
+    <section class="row row-3">
+      <div class="panel span-4">
+        <div class="panel-hd"><h2>品类结构</h2><span class="hint">GMV 与占比</span></div>
+        <div class="chart" id="c-category"></div>
+      </div>
+      <div class="panel span-4">
+        <div class="panel-hd"><h2>渠道贡献</h2><span class="hint">GMV 占比</span></div>
+        <div class="chart" id="c-channel"></div>
+      </div>
+      <div class="panel span-4">
+        <div class="panel-hd"><h2>支付方式</h2><span class="hint">按成交金额</span></div>
+        <div class="chart" id="c-payment"></div>
+      </div>
+    </section>
+
+    <section class="row row-4">
+      <div class="panel span-6">
+        <div class="panel-hd"><h2>时段 × 品类 销售热力</h2><span class="hint">24 小时 × 8 品类</span></div>
+        <div class="chart" id="c-heat"></div>
+      </div>
+      <div class="panel span-3">
+        <div class="panel-hd"><h2>城市客单价 × 单量</h2><span class="hint">气泡=GMV</span></div>
+        <div class="chart" id="c-scatter"></div>
+      </div>
+      <div class="panel span-3">
+        <div class="panel-hd"><h2>门店 TOP10</h2><span class="hint">按 GMV</span></div>
+        <ol class="rank" id="storeRank"></ol>
+      </div>
+    </section>
+
+    <div id="err" class="err" hidden></div>
+  </div>
+</div>
+
+<script src="vendor/echarts.min.js"></script>
+<script src="assets/screen.js"></script>
+</body>
+</html>
