@@ -1,7 +1,7 @@
 # 第 3 周 · Git 团队协同实践记录
 
-> 仓库：`github.com/CjL0107/ydsh-dw`　分支：`main` / `feature/w3-aov-nullfix`
-> 本周提交：10 次（含 1 次合并提交）　时间跨度：2026-11-09
+> 仓库：`github.com/CjL0107/ydsh-dw`　分支：`main` / `feature/w3-aov-nullfix` / `feature/nl2sql-dim-values`
+> 本周提交：27 次（含 1 次合并提交）　时间跨度：2026-11-09 至 2026-11-10
 > 说明：本项目为单人实训，团队协作流程按"分支 + PR + Review + Issue + 冲突解决"完整走一遍，
 > 除 Fork 与 PR 创建两项依赖 GitHub 网页端操作外，其余均在本地真实执行并有提交记录可追溯。
 
@@ -229,34 +229,61 @@ UU sql/ads/01_etl_ads.sql
 
 单人实训没有第二成员，Fork 与 PR 的**评审环节无法真实发生**。已真实完成的部分：
 
-- 分支创建、开发、提交（`feature/w3-aov-nullfix`，提交 `2e75afd`）
-- 分支已推送到远端：`origin/feature/w3-aov-nullfix`
+- 分支创建、开发、提交（`feature/w3-aov-nullfix` → `2e75afd`；`feature/nl2sql-dim-values` → `7f8581e`）
+- 两个分支均已推送到远端，`git ls-remote` 核对 HEAD 与本地一致
 - 合并与冲突解决（`cf433b9`）
 - 提交规范钩子拦截与整改
 
 **未完成**：PR 的创建与网页端 Review 评审。这一步需要登录 GitHub 网页操作，本地 CLI 环境未安装 `gh`，
 也没有配置 Personal Access Token，因此**不作虚假记录**。PR 描述文本已按规范拟好，可在网页端直接粘贴。
 
-### PR 描述（待提交）
+### 一次真实的踩坑：为什么 PR 建不出来
+
+第一次尝试为 `feature/w3-aov-nullfix` 建 PR，页面提示
+**"main is up to date with all commits from feature/w3-aov-nullfix"**。
+排查后确认不是权限或网络问题，而是**那个分支没有独有提交**：
+
+```bash
+$ git merge-base --is-ancestor 2e75afd main && echo "已并入 main"
+已并入 main
+```
+
+`2e75afd` 早已在 `main` 的历史里，分支与主干内容一致，GitHub 自然"没有东西可比较"。
+教训是：**建 PR 前先确认 `ahead_by > 0`**，看的是提交列表而不是页面按钮。
+
+后来改用确实有独有提交的 `feature/nl2sql-dim-values`（领先 `main` 多个独有提交），
+API 核对 `compare` 返回 `status: ahead`，`ahead_by` 大于 0，PR 就可以正常创建了。
+
+### PR 描述（`feature/nl2sql-dim-values`，待网页端提交）
 
 ```markdown
 ## 变更内容
-修复 ADS 层客单价计算的除零风险，并统一精度。
+把 8 个维度列的真实取值注入 Prompt，并修复 schema 抽取丢失 42 个 decimal 列的问题。
 
 ## 背景
-`aov = SUM(实付金额) / SUM(有效订单数)`，当某天没有有效订单时分母为 0，
-Hive 会抛除零异常导致整条 ETL 中断。
+1. 模型写 WHERE province = '广东'，而库里存的是「广东省」，等值匹配查出 NULL；
+   这类错误靠看字段名推不出来，只能把实际取值告诉它。
+2. 更根本的一处：describe() 用 CSV 解析 Hive 元信息，而 decimal(16,2) 的类型名自带逗号，
+   整行被切成 4 段、与 3 列表头对不齐后被静默丢弃。
+   14 张表里 42 个 decimal 列全没进 schema，包括所有表的 gmv / gmv_share / aov / metric_value。
 
 ## 改动
-- 分母包 `NULLIF(..., 0)`，无有效订单时返回 NULL 而不是报错
-- 外层 `CAST AS DECIMAL(14,2)`，与 DWS 层 aov 精度对齐
+- nl2sql_schema.py：新增 DIM_SPECS / extract_dims()，抽 8 维度 108 个取值到 dim_values.json
+- nl2sql.py：Prompt 注入维度取值；修正 Few-shot 里写错的 province = '广东'；
+  新增 check_dim_literals() 拦截库里不存在的维度值
+- hive_runner.py：describe() 改走 tsv2；run_sql() 增加 sep 参数；
+  部分行对不齐时向 stderr 告警；报错信息先过滤 SLF4J 噪声
+- validate_llm.py：两边都返回 0 行时不再判"一致"
 
 ## 验证
-重跑 `sql/ads/01_etl_ads.sql` 全流程通过，KPI 与改动前一致：
-GMV 27,342,828.20 / 有效订单 10,809 / AOV 2,529.64
+整轮 8 题：执行 8/8、严格一致 7/8、宽松一致 8/8、人工判定正确 7/8（改造前 5/8）。
+schema 字段数 70 → 112。明细见 python/outputs/llm_eval.md。
 
 ## 影响范围
-仅 `ydsh_ads` 层 aov 字段，不改口径，历史结果不变。
+- describe() 返回的列数会比以前多（以前 decimal 列被吞），下游如按列数写死需复核
+- 跑一次 nl2sql_schema.py 重新生成 schema.json 与 dim_values.json
+- 遗留：1 题部分正确（"销量"歧义）、两轮间仍有 4 题 SQL 被改写，
+  7/8 为单次运行结果，不可外推
 ```
 
 ---

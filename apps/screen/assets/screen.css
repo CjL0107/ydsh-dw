@@ -1,0 +1,181 @@
+/* ============================================================
+   云购生活 · 经营分析大屏  样式
+   设计稿固定 1920×1080，外层 #viewport 负责等比缩放（见 screen.js）
+   配色：深蓝底 + 青蓝主色 + 金色强调，数字用等宽字形保证小数点对齐
+   ============================================================ */
+:root {
+  --bg: #050a14;
+  --bg-2: #071224;
+  --panel: rgba(13, 26, 47, 0.78);
+  --panel-line: rgba(64, 158, 255, 0.22);
+  --txt: #e8f4ff;
+  --dim: #7c93b5;
+  --cyan: #22d3ee;
+  --blue: #3b82f6;
+  --gold: #fbbf24;
+  --purple: #a78bfa;
+  --red: #f87171;
+  --green: #34d399;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%; overflow: hidden;
+  background: radial-gradient(1200px 700px at 50% -10%, #0d2340 0%, var(--bg) 60%);
+  color: var(--txt);
+  font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#viewport { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+
+/* 设计稿尺寸；transform-origin 左上，缩放后居中由 JS 计算偏移 */
+#screen {
+  position: relative;
+  width: 1920px; height: 1080px;
+  padding: 18px 22px 16px;
+  display: flex; flex-direction: column; gap: 12px;
+  transform-origin: center center;
+  background:
+    linear-gradient(180deg, rgba(34, 211, 238, 0.05), transparent 30%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0 1px, transparent 1px 3px);
+}
+
+/* ---------------- 页头 ---------------- */
+.hd {
+  position: relative; height: 66px; flex: 0 0 66px;
+  display: flex; align-items: center; justify-content: center;
+  border-bottom: 1px solid rgba(34, 211, 238, 0.18);
+}
+.hd::after {
+  content: ""; position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%);
+  width: 520px; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  box-shadow: 0 0 14px rgba(34, 211, 238, 0.55);
+}
+.hd h1 {
+  font-size: 30px; font-weight: 700; letter-spacing: 6px;
+  background: linear-gradient(180deg, #ffffff 20%, #6fd7ef 95%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-shadow: 0 0 22px rgba(34, 211, 238, 0.28);
+}
+.hd-left, .hd-right {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--dim);
+}
+.hd-left { left: 4px; }
+.hd-right { right: 4px; flex-direction: row-reverse; gap: 16px; }
+.hd-sub { letter-spacing: 2px; font-size: 11px; color: #4f6f96; }
+.dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+  box-shadow: 0 0 10px var(--green); animation: pulse 2.2s infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+.clock { font-family: Consolas, "Courier New", monospace; font-size: 18px; color: #cfe8ff; letter-spacing: 1px; }
+.fresh { font-size: 11.5px; color: #6b8bb3; letter-spacing: 0.4px; }
+
+/* ---------------- 行与面板 ---------------- */
+.row { display: flex; gap: 12px; flex: 0 0 auto; min-height: 0; }
+.kpi-row { height: 104px; }
+/* flex-basis 必须是 0，不能是 auto。
+   用 auto 时每个行的基准高度取自内容，而内容（ECharts 画布）的高度又取决于行高，
+   形成互相拉扯：首屏量到的是 309/256/264，加了 ResizeObserver 之后变成 249/256/323，
+   趋势图那行反而被压矮。改成基准 0 + 按比例分配增长系数，行高就只由容器决定，
+   与内容无关，1356/1920/2560 三档都稳定。 */
+.row-2 { flex: 1.2 1 0; }
+.row-3 { flex: 1 1 0; }
+.row-4 { flex: 1.05 1 0; }
+
+.span-3 { flex: 3 1 0; } .span-4 { flex: 4 1 0; } .span-5 { flex: 5 1 0; }
+.span-6 { flex: 6 1 0; } .span-7 { flex: 7 1 0; } .span-8 { flex: 8 1 0; }
+
+.panel {
+  position: relative; min-width: 0; display: flex; flex-direction: column;
+  padding: 10px 14px 8px;
+  background: linear-gradient(180deg, rgba(17, 34, 60, 0.86), rgba(9, 18, 33, 0.9));
+  border: 1px solid var(--panel-line);
+  border-radius: 4px;
+  box-shadow: inset 0 0 26px rgba(34, 211, 238, 0.05), 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+/* 四角装饰：只画左上、右下两个角，比四角全画更克制 */
+.panel::before, .panel::after {
+  content: ""; position: absolute; width: 14px; height: 14px; pointer-events: none;
+  border-color: var(--cyan); opacity: 0.75;
+}
+.panel::before { top: -1px; left: -1px; border-top: 2px solid; border-left: 2px solid; }
+.panel::after { right: -1px; bottom: -1px; border-right: 2px solid; border-bottom: 2px solid; }
+
+.panel-hd { display: flex; align-items: baseline; gap: 10px; padding-bottom: 6px; flex: 0 0 auto; }
+.panel-hd h2 {
+  font-size: 16px; font-weight: 600; letter-spacing: 1px; color: #d8ecff;
+  padding-left: 10px; position: relative;
+}
+.panel-hd h2::before {
+  content: ""; position: absolute; left: 0; top: 3px; bottom: 3px; width: 3px;
+  background: linear-gradient(180deg, var(--cyan), rgba(34, 211, 238, 0));
+  border-radius: 2px;
+}
+.hint { font-size: 11px; color: #5d7ba1; letter-spacing: 0.5px; }
+
+.chart { flex: 1 1 auto; min-height: 0; width: 100%; }
+.map-note {
+  position: absolute; right: 12px; bottom: 6px;
+  font-size: 10px; color: #46618a; letter-spacing: 0.3px;
+}
+
+/* ---------------- KPI 卡片 ---------------- */
+.kpi {
+  position: relative; flex: 1 1 0; min-width: 0;
+  display: flex; flex-direction: column; justify-content: center; gap: 2px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.10), rgba(13, 26, 47, 0.6) 55%);
+  border: 1px solid rgba(34, 211, 238, 0.16);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.kpi::after {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--accent, var(--cyan));
+  box-shadow: 0 0 12px var(--accent, var(--cyan));
+}
+.kpi .label { font-size: 12.5px; color: #8fadcf; letter-spacing: 1px; }
+.kpi .value {
+  font-family: "DIN Alternate", Consolas, "Courier New", monospace;
+  font-size: 30px; font-weight: 700; line-height: 1.1;
+  color: var(--accent, var(--cyan));
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 18px rgba(34, 211, 238, 0.28);
+}
+.kpi .value small { font-size: 14px; font-weight: 400; color: #9db9d8; margin-left: 4px; }
+.kpi .sub { font-size: 11px; color: #5b7695; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------------- 门店排行 ---------------- */
+/* gap/padding 压到最小：10 家门店要在 ~220px 的面板里全部露出来。
+   原来 gap 4 + padding 3 只能显示 7 条，最后 3 条被 overflow:hidden 切掉，
+   截图里看起来像"数据只有 7 条"。 */
+.rank { flex: 1 1 auto; min-height: 0; list-style: none; display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
+.rank li { position: relative; display: flex; align-items: center; gap: 8px; font-size: 11.5px; padding: 2px 0; }
+.rank li .no {
+  flex: 0 0 18px; height: 18px; line-height: 18px; text-align: center; font-size: 11px;
+  color: #06121f; font-weight: 700; background: #4b6b90; border-radius: 3px;
+}
+.rank li:nth-child(1) .no { background: var(--gold); }
+.rank li:nth-child(2) .no { background: #cbd5e1; }
+.rank li:nth-child(3) .no { background: #d08a4a; }
+.rank li .nm { flex: 1 1 auto; min-width: 0; color: #cfe3f8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rank li .city { flex: 0 0 auto; color: #5f7d9f; font-size: 11px; }
+.rank li .val { flex: 0 0 74px; text-align: right; color: var(--gold); font-family: Consolas, monospace; }
+.rank li .bar {
+  position: absolute; left: 0; bottom: 0; height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.85), rgba(251, 191, 36, 0.05));
+}
+
+/* ---------------- 错误提示 ---------------- */
+.err {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  max-width: 760px; padding: 18px 24px; z-index: 20;
+  background: rgba(60, 12, 20, 0.94); border: 1px solid #b93a4a; border-radius: 6px;
+  color: #ffd7dd; font-size: 14px; line-height: 1.7; white-space: pre-wrap;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+}

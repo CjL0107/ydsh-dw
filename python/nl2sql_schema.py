@@ -23,10 +23,29 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from hive_runner import describe, show_tables
+from hive_runner import describe, run_sql, show_tables
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "python" / "outputs" / "schema.json"
+DIM_OUT = ROOT / "python" / "outputs" / "dim_values.json"
+
+# 需要告诉模型"真实取值长什么样"的维度列。
+# 起因：实测模型把「广东省」写成 WHERE province = '广东'，等值匹配查出 NULL。
+# 只看字段名和注释，模型无从知道库里存的是"广东省"还是"广东"，
+# 所以必须把实际取值一并注入 Prompt。
+DIM_SPECS = [
+    ("province", "ydsh_dws.dws_sales_store_day", "province", "省份（存的是全称，如「广东省」，不是「广东」）"),
+    ("city", "ydsh_dws.dws_sales_store_day", "city", "城市"),
+    ("store_level", "ydsh_dws.dws_sales_store_day", "store_level", "门店分级"),
+    ("channel", "ydsh_dws.dws_sales_channel_day", "channel", "销售渠道"),
+    ("category", "ydsh_dws.dws_sales_category_day", "category", "商品品类"),
+    ("year_month", "ydsh_dws.dws_sales_month", "year_month", "月份，格式 yyyy-MM"),
+    # KPI 表是竖表，指标名也是"维度值"。实测模型写 metric_name = '客单价'
+    # 查出 0 行——库里存的是「客单价 AOV」。这跟「广东 / 广东省」是同一类错误。
+    ("metric_key", "ydsh_ads.ads_kpi_summary", "metric_key", "KPI 指标键（英文小写）"),
+    ("metric_name", "ydsh_ads.ads_kpi_summary", "metric_name",
+     "KPI 指标中文名（带单位后缀，如「客单价 AOV」，不是「客单价」）"),
+]
 
 # 只暴露业务可查的库，ODS 层是原始脏数据，不开放给 NL2SQL
 DATABASES = ["ydsh_dws", "ydsh_ads"]
@@ -68,6 +87,45 @@ def extract() -> dict:
     return schema
 
 
+def extract_dims(sample_limit: int = 60) -> dict:
+    """抽取维度列的实际取值，供 Prompt 注入与结果侧校验共用。
+
+    取值超过 sample_limit 时只保留前若干个并标记 truncated——
+    Prompt 塞太长会挤压 Schema 的注意力，反而降准确率。
+    """
+    dims = {"generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "dims": {}}
+    for name, table, col, note in DIM_SPECS:
+        try:
+            rows = run_sql(
+                f"SELECT {col} AS v, COUNT(1) AS c FROM {table} "
+                f"GROUP BY {col} ORDER BY c DESC"
+            )
+        except Exception as e:  # noqa: BLE001
+            print(f"  跳过 {name}：{e}")
+            continue
+        vals = [str(r["v"]) for r in rows if r.get("v") not in (None, "", "NULL")]
+        dims["dims"][name] = {
+            "table": table,
+            "column": col,
+            "note": note,
+            "values": vals[:sample_limit],
+            "truncated": len(vals) > sample_limit,
+            "total": len(vals),
+        }
+        print(f"  维度 {name}({table}.{col}): {len(vals)} 个取值")
+    return dims
+
+
+def to_dim_text(dims: dict) -> str:
+    """把维度取值压成给大模型看的文本。等值匹配必须用这里的原值。"""
+    lines = ["维度取值（WHERE 做等值匹配时**必须逐字使用下列原始值**，不要简化或改写）："]
+    for name, d in dims["dims"].items():
+        vals = "、".join(f"'{v}'" for v in d["values"])
+        tail = f" 等 {d['total']} 个" if d["truncated"] else ""
+        lines.append(f"- {d['table']}.{d['column']}（{d['note']}）：{vals}{tail}")
+    return "\n".join(lines)
+
+
 def to_prompt_text(schema: dict, max_cols: int = 40) -> str:
     """把 schema 压成给大模型看的紧凑文本（只保留中文注释，丢掉 long 类型噪声）"""
     lines = []
@@ -94,7 +152,15 @@ def main():
     OUT.write_text(json.dumps(schema, ensure_ascii=False, indent=2), encoding="utf-8")
     n_tables = sum(len(v) for v in schema["databases"].values())
     print(f"\n已写入 {OUT}（{n_tables} 张表）")
+
+    print("\n抽取维度取值 ...")
+    dims = extract_dims()
+    DIM_OUT.write_text(json.dumps(dims, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"已写入 {DIM_OUT}（{len(dims['dims'])} 个维度）")
+
     if args.show:
+        print("\n" + "=" * 60)
+        print(to_dim_text(dims))
         print("\n" + "=" * 60)
         print(to_prompt_text(schema))
     return 0

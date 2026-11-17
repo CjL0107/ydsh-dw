@@ -1,0 +1,20 @@
+# 构建上下文瘦身：镜像里只需要 python / apps / docker 三个目录。
+# 其余（数仓 CSV、Git 历史、文档截图、本地快照）不进上下文，
+# 否则每次 build 都要给 Docker 传几十 MB 无用文件。
+#
+# 注意：路径前加 / 表示"仅匹配仓库根目录"。不加斜杠的 `data` 会连
+# `apps/api/data/snapshot.json` 一起排除，导致镜像里没有快照、大屏空白。
+.git
+.github
+.tmp
+/data
+/docs
+/deliverables
+/lib
+/sql
+/conf
+/tools
+*.md
+.env*
+docker-compose*.yml
+Dockerfile.hive
