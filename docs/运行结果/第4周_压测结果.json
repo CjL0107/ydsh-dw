@@ -1,0 +1,217 @@
+{
+  "generated_at": "2026-11-17 09:51:11",
+  "sql": {
+    "partition": "2024-04-12",
+    "cases": [
+      {
+        "key": "A1",
+        "label": "分区裁剪 · 开启",
+        "engine": "hive",
+        "ms": 3514.8,
+        "rows": 1,
+        "samples_ms": [
+          3514.8,
+          3522.2,
+          3479.7
+        ],
+        "error": null
+      },
+      {
+        "key": "A2",
+        "label": "分区裁剪 · 关闭（函数包裹分区列）",
+        "engine": "hive",
+        "ms": 3557.7,
+        "rows": 1,
+        "samples_ms": [
+          3527.8,
+          3744.2,
+          3557.7
+        ],
+        "error": null
+      },
+      {
+        "key": "B1",
+        "label": "列裁剪 · 只读 1 列（pay_amount）",
+        "engine": "hive",
+        "ms": 3637.1,
+        "rows": 1,
+        "samples_ms": [
+          3637.1,
+          3584.7,
+          3809.2
+        ],
+        "error": null
+      },
+      {
+        "key": "B2",
+        "label": "列裁剪 · 读全部 17 列",
+        "engine": "hive",
+        "ms": 3688.5,
+        "rows": 1,
+        "samples_ms": [
+          3706.6,
+          3688.5,
+          3610.1
+        ],
+        "error": null
+      },
+      {
+        "key": "C1",
+        "label": "分组聚合 · 直接 group by（有倾斜）",
+        "engine": "hive",
+        "ms": 3745.2,
+        "rows": 34,
+        "samples_ms": [
+          3745.2,
+          3598.8,
+          3877.8
+        ],
+        "error": null
+      },
+      {
+        "key": "C2",
+        "label": "分组聚合 · 加盐两阶段",
+        "engine": "hive",
+        "ms": 3674.3,
+        "rows": 34,
+        "samples_ms": [
+          3947.8,
+          3674.3,
+          3645.3
+        ],
+        "error": null
+      },
+      {
+        "key": "D1",
+        "label": "省 GMV · Hive 明细现算（join 维表）",
+        "engine": "hive",
+        "ms": 4207.7,
+        "rows": 13,
+        "samples_ms": [
+          4196.6,
+          4207.7,
+          4418.2
+        ],
+        "error": null
+      },
+      {
+        "key": "D2",
+        "label": "省 GMV · Hive ADS 预聚合",
+        "engine": "hive",
+        "ms": 3546.3,
+        "rows": 10,
+        "samples_ms": [
+          3546.3,
+          3552.3,
+          3446.8
+        ],
+        "error": null
+      },
+      {
+        "key": "D3",
+        "label": "省 GMV · MySQL ADS（仪表板数据源）",
+        "engine": "mysql",
+        "ms": 26.8,
+        "rows": 10,
+        "samples_ms": [
+          27.4,
+          22.7,
+          26.8
+        ],
+        "error": null
+      },
+      {
+        "key": "D4",
+        "label": "省 GMV · ClickHouse ADS",
+        "engine": "clickhouse",
+        "ms": 7.7,
+        "rows": 10,
+        "samples_ms": [
+          17.6,
+          6.0,
+          7.7
+        ],
+        "error": null
+      }
+    ],
+    "findings": [
+      {
+        "topic": "分区裁剪",
+        "slow": "分区裁剪 · 关闭（函数包裹分区列） 3557.7ms",
+        "fast": "分区裁剪 · 开启 3514.8ms",
+        "ratio": 1.01
+      },
+      {
+        "topic": "列裁剪",
+        "slow": "列裁剪 · 读全部 17 列 3688.5ms",
+        "fast": "列裁剪 · 只读 1 列（pay_amount） 3637.1ms",
+        "ratio": 1.01
+      },
+      {
+        "topic": "倾斜治理",
+        "slow": "分组聚合 · 直接 group by（有倾斜） 3745.2ms",
+        "fast": "分组聚合 · 加盐两阶段 3674.3ms",
+        "ratio": 1.02
+      },
+      {
+        "topic": "明细现算 → MySQL ADS",
+        "slow": "省 GMV · Hive 明细现算（join 维表） 4207.7ms",
+        "fast": "省 GMV · MySQL ADS（仪表板数据源） 26.8ms",
+        "ratio": 157.0
+      }
+    ]
+  },
+  "explain": {
+    "partition": "2024-04-12",
+    "partitions": 366,
+    "rows_total": 15000,
+    "rows_one_partition": 60,
+    "io_saving_pct": 99.7,
+    "rows_ratio": 250.0
+  },
+  "api": {
+    "base": "http://127.0.0.1:8000",
+    "levels": [
+      {
+        "concurrency": 1,
+        "requests": 200,
+        "ok": 200,
+        "failed": 0,
+        "qps": 48.4,
+        "p50": 15.3,
+        "p95": 36.2,
+        "max": 42.0
+      },
+      {
+        "concurrency": 5,
+        "requests": 200,
+        "ok": 200,
+        "failed": 0,
+        "qps": 281.9,
+        "p50": 16.1,
+        "p95": 30.0,
+        "max": 40.1
+      },
+      {
+        "concurrency": 20,
+        "requests": 200,
+        "ok": 200,
+        "failed": 0,
+        "qps": 428.0,
+        "p50": 44.4,
+        "p95": 51.7,
+        "max": 58.7
+      },
+      {
+        "concurrency": 50,
+        "requests": 200,
+        "ok": 200,
+        "failed": 0,
+        "qps": 418.6,
+        "p50": 90.3,
+        "p95": 117.9,
+        "max": 135.9
+      }
+    ]
+  }
+}
