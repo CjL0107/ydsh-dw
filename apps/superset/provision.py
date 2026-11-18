@@ -121,7 +121,10 @@ CHARTS = [
         "viz_type": "table",
         "params": {
             "viz_type": "table", "query_mode": "aggregate",
-            "groupby": ["store_name", "city", "store_level"],
+            # 必须带 store_id：dim_store 有 60 家店但只有 52 个不同店名
+            # （同名不同址，如两个"北京二店"），只按店名分组会把两家店合成一家，
+            # 门店 GMV 直接从 56 万虚高到 88 万。
+            "groupby": ["store_id", "store_name", "city", "store_level"],
             "metrics": ["GMV", "订单数"],
             "order_by_cols": ['["GMV", false]'],
             "row_limit": 10, "time_range": "No filter", "adhoc_filters": [],
