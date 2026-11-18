@@ -316,6 +316,64 @@ def link_charts(board_id: int, chart_ids: list[int]) -> None:
     conn.close()
 
 
+def grant_public_read(dataset_ids: list[int]) -> None:
+    """让 Public 角色能读「本项目的这几个数据集」，从而免登录看看板。
+
+    为什么必须单独做这一步：
+        PUBLIC_ROLE_LIKE = "Gamma" 只把 Public 角色的菜单/读写权限补成 Gamma，
+        而 Gamma 对**数据集**是空的 —— 数据集权限是按表逐条授予的
+        （每条是 view_menu 里的 `[库].[表](id:N)` + `datasource_access`）。
+        Superset 判定非管理员能否看看板的规则是
+        「看板里至少有一个能访问的数据集」，所以只补 Gamma 的结果是：
+        看板页 302 回列表、列表 count=0，表现就是"没有数据"。
+
+    权限边界（最小化）：
+        只给仪表板实际用到的这 8 张 ADS 结果表，不给 all_datasource_access，
+        明细层 dwd/dws 仍然读不到；匿名只读，没有 can_write。
+    """
+    import pymysql
+
+    conn = pymysql.connect(
+        host=os.getenv("SUPERSET_META_HOST", "127.0.0.1"),
+        port=int(os.getenv("SUPERSET_META_PORT", "3307")),
+        user=os.getenv("MYSQL_USER", "root"), password=MYSQL_PWD,
+        database=os.getenv("SUPERSET_DB", "superset"), autocommit=True,
+    )
+    cur = conn.cursor()
+    # view_menu 的名字形如 "[MySQL · ADS 结果层].[ads_kpi_summary](id:7)"，
+    # 库里带中文和点号，直接按名字匹配容易踩坑，用结尾的 (id:N) 定位更稳。
+    granted = 0
+    for ds_id in dataset_ids:
+        cur.execute(
+            """
+            INSERT IGNORE INTO ab_permission_view_role (permission_view_id, role_id)
+            SELECT pv.id, r.id
+            FROM ab_permission_view pv
+            JOIN ab_permission p ON p.id = pv.permission_id
+            JOIN ab_view_menu vm ON vm.id = pv.view_menu_id
+            CROSS JOIN ab_role r
+            WHERE p.name = 'datasource_access'
+              AND r.name = 'Public'
+              AND vm.name LIKE %s
+            """,
+            (f"%(id:{ds_id})",),
+        )
+        granted += cur.rowcount
+    cur.execute(
+        """
+        SELECT COUNT(*) FROM ab_permission_view_role pvr
+        JOIN ab_role r ON r.id = pvr.role_id
+        JOIN ab_permission_view pv ON pv.id = pvr.permission_view_id
+        JOIN ab_permission p ON p.id = pv.permission_id
+        WHERE r.name = 'Public' AND p.name = 'datasource_access'
+        """
+    )
+    total = cur.fetchone()[0]
+    print(f"  [+] Public 数据集读权限：新增 {granted} 条，累计 {total} 条")
+    cur.close()
+    conn.close()
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--reset", action="store_true", help="清空状态文件后重建")
@@ -354,8 +412,12 @@ def main() -> int:
     board_id = ensure_dashboard(ss, chart_ids)
     link_charts(board_id, chart_ids)
 
+    print("[5] 免登录查看（Public 角色）")
+    grant_public_read(list(ds_ids.values()))
+
     print(f"\n完成：{BASE}/superset/dashboard/{board_id}/")
     print(f"图表 {len(chart_ids)} 个　数据集 {len(ds_ids)} 个")
+    print("免登录模板：/superset/dashboard/ydsh-sales-overview/（公开只读）")
     return 0
 
 
