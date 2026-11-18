@@ -48,6 +48,15 @@ DB_HIVE = "Hive · 数仓明细（即席查询）"
 DASHBOARD = "云购生活 · 经营分析仪表板"
 
 DATASETS = [
+    # 可视化宽表：所有仪表板图表都挂这一个数据集。
+    # 原来是一图一表（8 张 ADS 结果表各管一个面板），字段互不相交，
+    # 交叉筛选没有公共维度可下发 —— 界面上标签出来了、查询也重发了，图却不变化。
+    ("ads_viz_wide", [
+        ("GMV", "SUM(pay_amount)"),
+        ("订单数", "COUNT(DISTINCT order_id)"),
+        ("用户数", "COUNT(DISTINCT user_id)"),
+        ("件数", "SUM(quantity)"),
+    ]),
     ("ads_sales_daily_report", [("GMV", "SUM(gmv)"), ("有效订单", "SUM(paid_order_cnt)"), ("客单价", "AVG(aov)")]),
     ("ads_category_top10", [("GMV", "SUM(gmv)"), ("订单数", "SUM(order_cnt)")]),
     ("ads_province_top10", [("GMV", "SUM(gmv)"), ("订单数", "SUM(order_cnt)")]),
@@ -58,10 +67,12 @@ DATASETS = [
     ("ads_hour_category", [("GMV", "SUM(gmv)")]),
 ]
 
+WIDE = "ads_viz_wide"
+
 CHARTS = [
     {
         "name": "① 全年 GMV 趋势",
-        "dataset": "ads_sales_daily_report",
+        "dataset": WIDE,
         "viz_type": "echarts_timeseries_line",
         "params": {
             "viz_type": "echarts_timeseries_line", "x_axis": "stat_date",
@@ -73,29 +84,29 @@ CHARTS = [
     },
     {
         "name": "② 品类 GMV 结构",
-        "dataset": "ads_category_top10",
+        "dataset": WIDE,
         "viz_type": "echarts_timeseries_bar",
         "params": {
             "viz_type": "echarts_timeseries_bar", "x_axis": "category",
             "metrics": ["GMV"], "groupby": [], "time_range": "No filter",
-            "row_limit": 10, "adhoc_filters": [],
+            "row_limit": 20, "adhoc_filters": [], "order_desc": True,
             "x_axis_title": "品类", "y_axis_title": "GMV（元）", "show_legend": False,
         },
     },
     {
         "name": "③ 省份 GMV 排行（区域分布）",
-        "dataset": "ads_province_top10",
+        "dataset": WIDE,
         "viz_type": "echarts_timeseries_bar",
         "params": {
             "viz_type": "echarts_timeseries_bar", "x_axis": "province",
             "metrics": ["GMV"], "groupby": [], "time_range": "No filter",
-            "row_limit": 10, "adhoc_filters": [],
+            "row_limit": 20, "adhoc_filters": [], "order_desc": True,
             "x_axis_title": "省份", "y_axis_title": "GMV（元）", "show_legend": False,
         },
     },
     {
         "name": "④ 支付方式占比",
-        "dataset": "ads_payment_share",
+        "dataset": WIDE,
         "viz_type": "pie",
         "params": {
             "viz_type": "pie", "groupby": ["pay_type"], "metric": "GMV",
@@ -106,19 +117,20 @@ CHARTS = [
     },
     {
         "name": "⑤ 门店 GMV TOP10",
-        "dataset": "ads_store_top10",
+        "dataset": WIDE,
         "viz_type": "table",
         "params": {
-            "viz_type": "table", "query_mode": "raw",
-            "all_columns": ["rank_no", "store_name", "city", "store_level", "gmv", "order_cnt", "aov"],
-            "order_by_cols": ['["gmv", false]'],
+            "viz_type": "table", "query_mode": "aggregate",
+            "groupby": ["store_name", "city", "store_level"],
+            "metrics": ["GMV", "订单数"],
+            "order_by_cols": ['["GMV", false]'],
             "row_limit": 10, "time_range": "No filter", "adhoc_filters": [],
             "show_cell_bars": True,
         },
     },
     {
         "name": "⑥ 渠道 GMV 占比",
-        "dataset": "ads_channel_contribution",
+        "dataset": WIDE,
         "viz_type": "pie",
         "params": {
             "viz_type": "pie", "groupby": ["channel"], "metric": "GMV",
@@ -272,17 +284,105 @@ def build_position(chart_ids: list[int]) -> str:
     return json.dumps(pos, ensure_ascii=False)
 
 
-def ensure_dashboard(ss: "Superset", chart_ids: list[int]) -> int:
+def ensure_count_metric(ds_id: int) -> None:
+    """给数据集补一个 count 指标。
+
+    原生筛选器初始化时要拿数据集的 count 指标来算"有多少可选值"，
+    数据集没有这条指标时筛选器会直接报
+        Error: Metric 'count' does not exist
+    而 Superset 4.1 的 PUT /dataset 补 count 会被 422
+        "One or more metrics already exist"
+    挡住（它要求一次提交全部指标，且不允许重名）。所以只能直接插表。
+    """
+    import pymysql
+
+    conn = pymysql.connect(
+        host=os.getenv("SUPERSET_META_HOST", "127.0.0.1"),
+        port=int(os.getenv("SUPERSET_META_PORT", "3307")),
+        user=os.getenv("MYSQL_USER", "root"), password=MYSQL_PWD,
+        database=os.getenv("SUPERSET_DB", "superset"), autocommit=True,
+    )
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM sql_metrics WHERE table_id=%s AND metric_name='count'", (ds_id,))
+    if cur.fetchone():
+        print(f"  [=] count 指标已存在（dataset {ds_id}）")
+    else:
+        cur.execute(
+            "INSERT INTO sql_metrics (metric_name, expression, metric_type, table_id, "
+            "created_on, changed_on) VALUES ('count','COUNT(*)','count',%s, NOW(), NOW())",
+            (ds_id,),
+        )
+        print(f"  [+] 已补 count 指标（dataset {ds_id}）")
+    cur.close()
+    conn.close()
+
+
+def build_filters(ds_id: int, chart_ids: list[int]) -> list[dict]:
+    """仪表板左侧的原生筛选器。
+
+    为什么要脚本化：筛选器只存在 json_metadata 里，手点出来的换台机器就没了。
+    为什么时间筛选器要 defaultDataMask=No filter：给死默认值的话，
+    第一次打开看板就只剩一个时间窗，演示时容易被误认为数据缺失。
+
+    filter_select 的 targets 必须指向「图表实际用的那个数据集」。
+    之前图表各用各的表，筛选器只能命中其中一张，现在全部落在 ads_viz_wide 上。
+    """
+    scope = {"rootPath": ["ROOT_ID"], "excluded": []}
+
+    def value_filter(fid: str, name: str, column: str) -> dict:
+        return {
+            "id": fid, "name": name, "filterType": "filter_select",
+            "targets": [{"datasetId": ds_id, "column": {"name": column}}],
+            "defaultDataMask": {"extraFormData": {}, "filterState": {"value": None}, "ownState": {}},
+            "controlValues": {
+                "enableEmptyFilter": False, "multiSelect": True,
+                "sortAscending": True, "canSelectAll": True,
+                "defaultToFirstItem": False, "inverseSelection": False,
+                "searchAllOptions": True, "canCreateNew": False, "creatable": False,
+            },
+            "scope": scope, "chartsInScope": chart_ids, "tabsInScope": [],
+            "type": "NATIVE_FILTER", "description": "",
+        }
+
+    return [
+        {
+            "id": "NATIVE_FILTER-time-1", "name": "统计日期", "filterType": "filter_time",
+            "targets": [{"datasetId": ds_id, "column": {"name": "stat_date"}}],
+            "defaultDataMask": {"extraFormData": {},
+                                "filterState": {"value": "No filter"}, "ownState": {}},
+            "controlValues": {"enableEmptyFilter": False},
+            "scope": scope, "chartsInScope": chart_ids, "tabsInScope": [],
+            "type": "NATIVE_FILTER", "description": "",
+        },
+        value_filter("NATIVE_FILTER-category", "品类", "category"),
+        value_filter("NATIVE_FILTER-province", "省份", "province"),
+        value_filter("NATIVE_FILTER-paytype", "支付方式", "pay_type"),
+    ]
+
+
+def ensure_dashboard(ss: "Superset", chart_ids: list[int], ds_id: int) -> int:
+    meta = {
+        "chart_configuration": {},
+        "color_scheme": "supersetColors",
+        "refresh_frequency": 0,
+        # 交叉筛选必须显式打开：默认是关的，关着的时候点图不会有任何反应
+        "cross_filters_enabled": True,
+        "timed_refresh_immune_slices": [],
+        "expanded_slices": {},
+        "label_colors": {},
+        "shared_label_colors": {},
+        "color_scheme_domain": [],
+        "native_filter_configuration": build_filters(ds_id, chart_ids),
+    }
     payload = {
         "dashboard_title": DASHBOARD, "slug": "ydsh-sales-overview", "published": True,
         "position_json": build_position(chart_ids),
-        "json_metadata": json.dumps({"chart_configuration": {}, "color_scheme": "supersetColors",
-                                     "refresh_frequency": 0}),
+        "json_metadata": json.dumps(meta, ensure_ascii=False),
     }
     hit = find(ss.get("dashboard/")["result"], "dashboard_title", DASHBOARD)
     if hit:
         ss.put(f"dashboard/{hit['id']}", payload)
-        print(f"  [=] 仪表板已更新 (id={hit['id']})")
+        print(f"  [=] 仪表板已更新 (id={hit['id']})，筛选器 {len(meta['native_filter_configuration'])} 个")
         return hit["id"]
     res = ss.post("dashboard/", payload)
     print(f"  [+] 已创建仪表板 (id={res['id']})")
@@ -409,7 +509,8 @@ def main() -> int:
         chart_ids.append(ensure_chart(ss, spec, ds_ids[spec["dataset"]]))
 
     print("[4] 仪表板")
-    board_id = ensure_dashboard(ss, chart_ids)
+    ensure_count_metric(ds_ids[WIDE])
+    board_id = ensure_dashboard(ss, chart_ids, ds_ids[WIDE])
     link_charts(board_id, chart_ids)
 
     print("[5] 免登录查看（Public 角色）")

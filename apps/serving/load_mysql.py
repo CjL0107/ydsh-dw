@@ -68,6 +68,13 @@ MIRROR = [
 
 PAID = "('OS02','OS03','OS05')"
 
+# 可视化宽表：2.6 万行，不能走默认的 5000 行上限（会被静默截断成前 5000 行，
+# 表现为图表总数偏小、且很难一眼发现）。单独列出来，把上限提到 5 万。
+WIDE = [
+    ("ads_viz_wide", "ydsh_ads.ads_viz_wide", "order_id", 50000),
+]
+
+
 DERIVED = [
     ("ads_payment_share",
      f"select pay_type, count(1) orders, round(sum(pay_amount), 2) gmv, round(avg(pay_amount), 2) aov "
@@ -112,9 +119,32 @@ def main() -> None:
         rows = run_sql(sql, max_rows=500)
         _load(cur, table, cols, rows, "derived")
 
+    for table, source, _order, limit in WIDE:
+        db, tb = source.split(".")
+        cols = [(c, t) for c, t, _ in describe(db, tb)]
+        rows = run_sql(f"select * from {source}", max_rows=limit)
+        if len(rows) >= limit:
+            raise RuntimeError(f"{table} 取到 {len(rows)} 行，已撞上限，会被截断")
+        _load(cur, table, cols, rows, source)
+
     cur.close()
     conn.close()
     print("[mysql] 同步完成")
+
+
+def _clean(v):
+    """Hive 的空值到客户端可能变成 ''、'NULL'、'NaN'、'\\N' 四种形态。
+
+    beeline 输出 CSV 时是字符串 'NULL'，pyhive 走 Thrift 时是 None 或 ''。
+    不归一化就会在 decimal 列上报
+        (1366, "Incorrect decimal value: '' for column 'gmv_dod'")
+    —— 这个坑在第 3 周 ClickHouse 装载时也踩过一次。
+    """
+    if v is None:
+        return None
+    if isinstance(v, str) and v.strip().lower() in ("", "null", "nan", "\\n", "none"):
+        return None
+    return v
 
 
 def _load(cur, table: str, cols, rows, source: str) -> None:
@@ -125,7 +155,7 @@ def _load(cur, table: str, cols, rows, source: str) -> None:
         names = [c for c, _ in cols]
         placeholders = ",".join(["%s"] * len(names))
         sql = f"INSERT INTO `{table}` ({','.join('`%s`' % n for n in names)}) VALUES ({placeholders})"
-        cur.executemany(sql, [[r.get(n) if r.get(n) != "NULL" else None for n in names] for r in rows])
+        cur.executemany(sql, [[_clean(r.get(n)) for n in names] for r in rows])
     cur.execute(f"SELECT COUNT(*) FROM `{table}`")
     print(f"[mysql] {table:<30} 源={source:<38} 行数={cur.fetchone()[0]}")
 
