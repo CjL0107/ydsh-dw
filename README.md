@@ -348,17 +348,23 @@ python tools/check_repo.py
 
 匿名免登录即可打开，看板内 6 张图共用同一张明细粒度宽表 `ads_viz_wide`，因此**点任意图表可联动其余图表**（交叉筛选），左侧四个原生筛选器支持时间 / 品类 / 省份 / 支付方式。
 
-<img src="docs/screenshots/第4周_Superset仪表板_免登录.png" width="880" alt="Superset 仪表板 - 匿名免登录访问">
+<img src="docs/screenshots/w4_superset_dashboard.png" width="880" alt="Superset 仪表板 - 匿名免登录访问">
+
+<p align="center"><sub>Superset 仪表板：6 张图共用同一宽表，点击任一图表可联动其余图表</sub></p>
 
 ### 13.2 ECharts 数据大屏（9 面板 + 6 KPI，三档分辨率自适应）
 
-<img src="docs/screenshots/第4周_大屏_1920x1080.png" width="880" alt="ECharts 数据大屏 1920x1080">
+<img src="docs/screenshots/w4_screen_1920.png" width="880" alt="ECharts 数据大屏 1920x1080">
 
-> 另见 [1366×768](docs/screenshots/第4周_大屏_1366x768.png) 与 [2560×1440](docs/screenshots/第4周_大屏_2560x1440.png) 两档，用于验证响应式布局。
+<p align="center"><sub>ECharts 数据大屏：9 面板 + 6 KPI，1920×1080</sub></p>
+
+> 另见 [1366×768](docs/screenshots/w4_screen_1366.png) 与 [2560×1440](docs/screenshots/w4_screen_2560.png) 两档，用于验证响应式布局。
 
 ### 13.3 Streamlit 对话式问答（复用第 3 周 NL2SQL）
 
-<img src="docs/screenshots/第4周_Streamlit_问答_渠道占比.png" width="880" alt="Streamlit NL2SQL 问答 - 渠道占比">
+<img src="docs/screenshots/w4_streamlit_qa.png" width="880" alt="Streamlit NL2SQL 问答 - 渠道占比">
+
+<p align="center"><sub>Streamlit 问答：输入自然语言问题，自动生成 SQL 并推断图表类型</sub></p>
 
 ### 13.4 第 4 周交付物索引
 
