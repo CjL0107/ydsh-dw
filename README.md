@@ -3,7 +3,24 @@
 > 课程：企业项目实战实训｜数据科学与大数据技术
 > 团队：**云购生活**｜成员：梁常金（独立完成，一人多岗）｜口号：让每一笔订单都可解释
 > 仓库：<https://github.com/CjL0107/ydsh-dw>
-> 当前进度：**第 2 周 —— 数据清洗进阶 · Hive 四层数仓建模 · 探索性分析** ✅ 已完成
+> 当前进度：**第 4 周 —— Superset 可视化仪表板 · ECharts 数据大屏 · Docker 七服务一键部署** ✅ 已完成
+
+---
+
+## 📌 老师阅读指引（30 秒找到想看的内容）
+
+本仓库四周成果都在这里，按下面顺序看最省时间：
+
+| 想了解 | 直接点这里 |
+|---|---|
+| **第 4 周效果长什么样** | [第十三节 · 第 4 周成果展示](#十三第-4-周成果展示)（截图直接内嵌，无需装环境） |
+| 系统整体架构 | [第二节 · 六层系统架构](#二六层系统架构) |
+| 每周交付物清单 | [第十节](#十第-1-周提交物索引) / [十一节](#十一第-2-周提交物索引) / [十二节](#十二第-3-周提交物索引) / [十三节](#十三第-4-周成果展示) |
+| 怎么在自己机器上跑起来 | [第五节 · 快速开始](#五快速开始)（Docker 一条命令） |
+| 部署踩过的坑与解法 | [`docs/第4周_部署手册.md`](docs/第4周_部署手册.md)（10 条真实故障排查） |
+| 每周实训周报 | [`第2周_实训周报.md`](第2周_实训周报.md) / [`第3周_实训周报.md`](第3周_实训周报.md) / [`第4周_实训周报.md`](第4周_实训周报.md) |
+
+> 说明：仪表板是本地 Docker 服务（`localhost:8088`），无法从公网直接打开，所以第四节成果以**实机截图**形式呈现，截图均为真实运行结果，非设计稿。
 
 ---
 
@@ -47,7 +64,7 @@
 
 ```
 ydsh-dw/
-├── docker-compose.yml          # Hive + MySQL 编排（三个容器）
+├── docker-compose.yml          # 七服务编排（MySQL / ClickHouse / Metastore / HiveServer2 / Superset / app / streamlit）
 ├── Dockerfile.hive             # 为 Hive 镜像补装 MySQL JDBC 驱动
 ├── .gitignore                  # 忽略数据文件/密钥/日志
 ├── conf/
@@ -77,6 +94,14 @@ ydsh-dw/
 │       ├── 06_clean_item_fact.sql  # 第2周：明细事实表（数量/单价）
 │       ├── 07_clean_behavior_fact.sql # 第2周：行为事实表（枚举/时间）
 │       └── 08_verify_after_clean.sql  # 第2周：清洗后全面校验
+├── apps/                       # 第3-4周：应用层
+│   ├── superset/provision.py   # 第4周：数据集/图表/看板/筛选器幂等初始化（9 数据集 / 6 图表 / 4 筛选器）
+│   ├── screen/                 # 第4周：ECharts 数据大屏（9 面板 + 6 KPI，vendor 本地化）
+│   ├── api/                    # 第4周：Flask 数据接口 + 快照（同源免跨域）
+│   ├── serving/                # 第4周：ADS 结果同步 MySQL / ClickHouse
+│   ├── perf/bench.py           # 第4周：压测（SQL / 结构证据 / 并发三模式）
+│   ├── streamlit_app.py        # 第4周：对话式问答，复用第3周 NL2SQL
+│   └── nl2sql/                 # 第3周：自然语言转 SQL + 维度值注入
 ├── scripts/                    # 一键执行脚本
 ├── tools/
 │   ├── profile_data.py         # 离线数据画像（建表前置）
@@ -93,7 +118,15 @@ ydsh-dw/
 │   ├── 云购生活_第1周_AI协同日志.md
 │   ├── Git协作规范.md
 │   ├── Docker常用命令手册.md
-│   └── screenshots/            # 实机运行截图
+│   ├── 第3周_NL2SQL评估报告.md      # 第3周：准确率与失败样本分析
+│   ├── 第3周_NL2SQL维度值注入改造.md # 第3周：把枚举值注入 prompt 的改造记录
+│   ├── 第3周_AI智能洞察与反思.md     # 第3周
+│   ├── 第3周_Git协同实践记录.md      # 第3周：分支/PR/合并实践
+│   ├── 第4周_部署手册.md            # 第4周：七服务部署 + 10 条故障排查
+│   ├── 第4周_API配置指南.md         # 第4周：密钥/数据源/接口/NL2SQL
+│   ├── 第4周_压力测试记录.md        # 第4周：三组对比 + EXPLAIN 证据
+│   ├── 运行结果/                    # 第4周：压测 JSON 原始输出
+│   └── screenshots/            # 实机运行截图（含第4周看板与大屏三档分辨率）
 └── deliverables/               # 交付物核对表
 ```
 
@@ -111,8 +144,9 @@ data/ods_order.csv ods_order_item.csv ods_user_behavior.csv
 ### 2. 启动环境
 
 ```powershell
+copy .env.example .env                # 先填密钥，否则 compose 直接报错退出
 docker compose up -d --build          # 首次需要 --build
-docker ps                             # 确认三个容器 Up
+docker compose ps                     # 确认七个容器 healthy
 ```
 
 | 服务 | 宿主端口 | 说明 |
@@ -121,6 +155,10 @@ docker ps                             # 确认三个容器 Up
 | HiveServer2 Web UI | 10002 | 浏览器打开看任务 |
 | Hive Metastore | 9083 | thrift 服务 |
 | MySQL（元数据库） | **3307** → 容器 3306 | 本机若已装 MySQL 占用了 3306，故错开 |
+| ClickHouse（第 4 周） | 8123 / 9000 | HTTP / Native，压测对比用 |
+| **Superset 仪表板**（第 4 周） | **8088** | <http://localhost:8088> 匿名可看 |
+| **ECharts 数据大屏**（第 4 周） | **8000** | <http://localhost:8000/screen> |
+| **Streamlit 问答**（第 4 周） | **8501** | <http://localhost:8501> |
 
 > 宿主机访问元数据库要用 3307：`mysql -h 127.0.0.1 -P 3307 -uroot -proot`。
 > 容器之间仍用 `mysql:3306`，Hive 配置无需改动。
@@ -237,8 +275,8 @@ python tools/check_repo.py
 |---|---|---|
 | 第 1 周 | 启动 · 环境 · Git · 数据导入与清洗（一） | ✅ 已完成 |
 | 第 2 周 | 清洗进阶 · 四层数仓建模 · 探索性分析 | ✅ 已完成 |
-| 第 3 周 | 数据分析 · 预测建模 · NL2SQL | ⬜ 未开始 |
-| 第 4 周 | 可视化（Superset + ECharts）· Docker 部署 | ⬜ 未开始 |
+| 第 3 周 | 数据分析 · 预测建模 · NL2SQL | ✅ 已完成 |
+| 第 4 周 | 可视化（Superset + ECharts）· Docker 部署 | ✅ 已完成 |
 | 第 5 周 | 系统集成 · 项目验收 · 答辩 | ⬜ 未开始 |
 
 ## 十、第 1 周提交物索引
@@ -284,3 +322,89 @@ python tools/check_repo.py
 | 有效订单 / GMV / 客单价 | 10,809 单 / 2,734.28 万元 / 2,529.64 元 |
 
 > 打包提交时压缩包命名为 `第2周_梁常金.zip`（沿用第 1 周的「第N周_姓名」惯例；任务书示例为 `第2周_提交.zip`），内容为整个项目目录（数据 CSV 按 .gitignore 规则排除）。
+
+## 十二、第 3 周提交物索引
+
+对应任务书《第 3 周任务书》的数据分析 · 预测建模 · NL2SQL 三部分：
+
+| # | 交付物 | 仓库位置 | 状态 |
+|---|---|---|---|
+| 1 | DWS / ADS 建模与 ETL 脚本 | [`sql/dws/`](sql/dws/)、[`sql/ads/`](sql/ads/)（各 7 张表） | ✅ |
+| 2 | 核心 KPI 结果表 | Hive `ydsh_ads.ads_kpi_summary`（15 项指标） | ✅ |
+| 3 | 预测建模分析报告 | [`docs/预测建模分析报告.md`](docs/预测建模分析报告.md) / `.docx` | ✅ |
+| 4 | NL2SQL 接口代码 | [`python/nl2sql.py`](python/nl2sql.py)、`nl2sql_schema.py`、`llm_client.py`、`hive_runner.py` | ✅ |
+| 5 | NL2SQL 真实调用评估报告 | [`docs/第3周_NL2SQL评估报告.md`](docs/第3周_NL2SQL评估报告.md)（8 题题集 · 双判据 · 根因追溯） | ✅ |
+| 6 | 8 题验证脚本 | [`python/validate_llm.py`](python/validate_llm.py)，可复现重跑 | ✅ |
+| 7 | AI 智能洞察与反思 | [`docs/第3周_AI智能洞察与反思.md`](docs/第3周_AI智能洞察与反思.md)（量价分解 · 双维度归因） | ✅ |
+| 8 | 大模型 API 接入指南 | [`docs/第3周_大模型API接入指南.md`](docs/第3周_大模型API接入指南.md) | ✅ |
+| 9 | Git 协同实践记录 | [`docs/第3周_Git协同实践记录.md`](docs/第3周_Git协同实践记录.md)（18 次提交 · 6 条 Review · 7 个 Issue · 1 次冲突解决） | ✅ |
+| 10 | metastore 注释修复工具 | [`tools/fix_metastore_comment.py`](tools/fix_metastore_comment.py)（回填 331 条） | ✅ |
+
+## 十三、第 4 周成果展示
+
+> 以下截图均来自本机 Docker 实机运行，非设计稿。对应任务书「可视化实现 + Docker 部署」。
+
+### 13.1 Superset 仪表板（6 图表 / 9 数据集 / 4 筛选器）
+
+匿名免登录即可打开，看板内 6 张图共用同一张明细粒度宽表 `ads_viz_wide`，因此**点任意图表可联动其余图表**（交叉筛选），左侧四个原生筛选器支持时间 / 品类 / 省份 / 支付方式。
+
+<img src="docs/screenshots/第4周_Superset仪表板_免登录.png" width="880" alt="Superset 仪表板 - 匿名免登录访问">
+
+### 13.2 ECharts 数据大屏（9 面板 + 6 KPI，三档分辨率自适应）
+
+<img src="docs/screenshots/第4周_大屏_1920x1080.png" width="880" alt="ECharts 数据大屏 1920x1080">
+
+> 另见 [1366×768](docs/screenshots/第4周_大屏_1366x768.png) 与 [2560×1440](docs/screenshots/第4周_大屏_2560x1440.png) 两档，用于验证响应式布局。
+
+### 13.3 Streamlit 对话式问答（复用第 3 周 NL2SQL）
+
+<img src="docs/screenshots/第4周_Streamlit_问答_渠道占比.png" width="880" alt="Streamlit NL2SQL 问答 - 渠道占比">
+
+### 13.4 第 4 周交付物索引
+
+| # | 交付物 | 仓库位置 | 状态 |
+|---|---|---|---|
+| 1 | Superset 仪表板 | [`apps/superset/provision.py`](apps/superset/provision.py)（幂等可重跑） | ✅ |
+| 2 | ECharts 数据大屏 | [`apps/screen/`](apps/screen/)（vendor 本地化，不依赖 CDN） | ✅ |
+| 3 | Streamlit 问答应用 | [`apps/streamlit_app.py`](apps/streamlit_app.py) | ✅ |
+| 4 | 七服务 Docker 编排 | [`docker-compose.yml`](docker-compose.yml) + [`.env.example`](.env.example) | ✅ |
+| 5 | 部署手册 | [`docs/第4周_部署手册.md`](docs/第4周_部署手册.md)（含 10 条真实故障排查） | ✅ |
+| 6 | API 配置指南 | [`docs/第4周_API配置指南.md`](docs/第4周_API配置指南.md) | ✅ |
+| 7 | 压力测试记录 | [`docs/第4周_压力测试记录.md`](docs/第4周_压力测试记录.md) + [`docs/运行结果/`](docs/运行结果/) | ✅ |
+| 8 | 压测与对比脚本 | [`apps/perf/bench.py`](apps/perf/bench.py)（SQL / 结构证据 / 并发三模式） | ✅ |
+| 9 | 可视化数据服务 | [`apps/api/`](apps/api/)（Flask + 快照）、[`apps/serving/`](apps/serving/)（MySQL / ClickHouse 同步） | ✅ |
+| 10 | 截图证据 | [`docs/screenshots/`](docs/screenshots/)（大屏 3 档 + Streamlit 2 张 + 仪表板 2 张） | ✅ |
+
+### 13.5 第 4 周关键数据
+
+| 项 | 值 |
+|---|---:|
+| 编排服务数 | 7（MySQL / ClickHouse / Metastore / HiveServer2 / Superset / 大屏 / Streamlit） |
+| 大屏面板 | 9 图表 + 6 KPI 卡 |
+| Superset 资源 | 9 数据集 / 6 图表 / 1 仪表板 / 4 筛选器 |
+| 可视化宽表 | 26,707 行 / 10,775 单 / GMV 27,258,618.94 元 |
+| 快照生成 | 10 面板 43.09 秒，29 KB，接口 P95 36.2 ms |
+| 首次部署 | 12 分 31 秒（含 3 个镜像构建）；二次启动约 90 秒 |
+
+**查询链路提速**（同一份 ADS 结果，四条路径对比）
+
+| 路径 | 耗时 | 相对基线 |
+|---|---:|---:|
+| Hive 明细现算（join 维表） | 4207.7 ms | 1× |
+| Hive ADS 预聚合 | 3546.3 ms | 1.2× |
+| MySQL ADS | 26.8 ms | **157×** |
+| ClickHouse ADS | 7.7 ms | **546×** |
+
+**并发压测**（Flask 快照接口，0 失败）
+
+| 并发 | QPS | P50 | P95 | 失败 |
+|---:|---:|---:|---:|---:|
+| 1 | 48.4 | 15.3 ms | 36.2 ms | 0 |
+| 5 | 281.9 | 16.1 ms | 30.0 ms | 0 |
+| 20 | **428.0** | 44.4 ms | 51.7 ms | 0 |
+| 50 | 418.6 | 90.3 ms | 117.9 ms | 0 |
+
+> 三组「看起来没用」的对比也如实记录在部署手册里：分区裁剪与列裁剪墙钟只差 1%，因为瓶颈是 Tez 启动开销；加盐两阶段实测 0.92×（更慢），数据量不足以倾斜，属负优化，**未上线**。
+
+> 打包提交时压缩包命名为 `第4周_梁常金.zip`，内容为整个项目目录（数据 CSV 与 `.env` 按 .gitignore 规则排除）。
+
